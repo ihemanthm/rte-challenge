@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "rte"
 version = "0.1.0"
 description = "RTE challenge: DeBERTa-v3 baseline and distilled student"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12,<3.14"
 
 [tool.setuptools.packages.find]
 where = ["src"]
