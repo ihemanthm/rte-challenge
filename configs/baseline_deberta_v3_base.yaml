@@ -1,0 +1,18 @@
+# Baseline AND distillation teacher. Run on Colab (CUDA, bf16 autocast).
+#   python -m rte.train --config configs/baseline_deberta_v3_base.yaml          # baseline, 5 seeds
+#   python -m rte.train --config configs/baseline_deberta_v3_base.yaml --oof    # teacher logits
+run_name: baseline_deberta_v3_base
+model_name: microsoft/deberta-v3-base
+max_length: 256
+seeds: [13, 21, 42, 87, 100]
+epochs: 10
+batch_size: 16
+lr: 2.0e-5
+head_lr: 1.0e-4
+layer_decay: 0.9
+weight_decay: 0.01
+warmup_ratio: 0.1
+val_fraction: 0.1
+patience: 3
+oof_folds: 5
+save_model: true

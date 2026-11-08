@@ -1,0 +1,14 @@
+# Top-level runtime dependencies. Edit this file, then run `make lock`.
+# The pinned, fully-resolved set lives in requirements.txt.
+torch
+transformers
+datasets
+accelerate
+sentencepiece
+protobuf
+scikit-learn
+numpy
+pandas
+pyyaml
+matplotlib
+tqdm
