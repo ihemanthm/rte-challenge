@@ -19,6 +19,7 @@ class DistillConfig:
     teacher_logits: str  # .npy, shape (n_train, 2), row-aligned with train_file
     alpha: float = 0.5  # weight on hard-label CE; (1 - alpha) on KL to teacher
     temperature: float = 2.0
+    mask_teacher_errors: bool = False  # CE only where the teacher is wrong
 
 
 @dataclass
@@ -44,6 +45,7 @@ class Config:
     device: str = "auto"
     save_model: bool = True  # save the best-validation seed's checkpoint
     oof_folds: int = 5  # used by `rte.train --oof` to export teacher logits
+    embedding_rank: int | None = None  # low-rank (SVD) word embedding, see rte.modeling
     distill: DistillConfig | None = None
 
     @property

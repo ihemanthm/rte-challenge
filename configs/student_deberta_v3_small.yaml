@@ -1,0 +1,16 @@
+# Size sweep: DeBERTa-v3-small (6 layers x 768) with the xsmall student recipe unchanged,
+# so only the model size differs.
+run_name: student_deberta_v3_small
+model_name: microsoft/deberta-v3-small
+max_length: 256
+seeds: [13, 21, 42, 87, 100]
+epochs: 15
+batch_size: 16
+lr: 5.0e-5
+head_lr: 1.0e-4
+layer_decay: 0.9
+weight_decay: 0.01
+warmup_ratio: 0.1
+val_fraction: 0.1
+patience: 4
+save_model: true

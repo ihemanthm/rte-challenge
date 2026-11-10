@@ -15,6 +15,6 @@ val_fraction: 0.1
 patience: 4
 save_model: true
 distill:
-  teacher_logits: outputs/baseline_deberta_v3_base_oof/teacher_logits_train.npy
+  teacher_logits: artifacts/teacher/teacher_logits_train.npy
   alpha: 0.5
   temperature: 2.0

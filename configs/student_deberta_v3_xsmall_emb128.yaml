@@ -1,0 +1,18 @@
+# Parameter efficiency: xsmall with its 128k x 384 word embedding (49.2M params) replaced by a
+# rank-128 factorisation initialised from its SVD (16.4M), so ~38M params in total.
+# Otherwise identical to student_deberta_v3_xsmall.yaml.
+run_name: student_deberta_v3_xsmall_emb128
+model_name: microsoft/deberta-v3-xsmall
+max_length: 256
+seeds: [13, 21, 42, 87, 100]
+epochs: 15
+batch_size: 16
+lr: 5.0e-5
+head_lr: 1.0e-4
+layer_decay: 0.9
+weight_decay: 0.01
+warmup_ratio: 0.1
+val_fraction: 0.1
+patience: 4
+save_model: true
+embedding_rank: 128

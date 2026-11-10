@@ -18,13 +18,9 @@ from contextlib import nullcontext
 import numpy as np
 import torch
 import torch.nn.functional as F
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    get_linear_schedule_with_warmup,
-)
+from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 
-from rte import ID2LABEL, LABEL2ID
+from rte import ID2LABEL
 from rte.config import Config, mirror, snapshot_environment
 from rte.data import (
     PairDataset,
@@ -36,24 +32,12 @@ from rte.data import (
     write_jsonl,
 )
 from rte.device import autocast_dtype, pick_device
+from rte.modeling import load_model
 from rte.params import count_params, fmt
 from rte.seed import set_seed
 
 _LAYER_RE = re.compile(r"\.layer\.(\d+)\.")
 _HEAD_KEYS = ("classifier", "pooler")
-
-
-def load_model(name: str):
-    return AutoModelForSequenceClassification.from_pretrained(
-        name,
-        num_labels=2,
-        id2label=ID2LABEL,
-        label2id=LABEL2ID,
-        # transformers>=5 defaults to the checkpoint dtype; DeBERTa-v3 ships fp16 weights, and
-        # AdamW on fp16 params underflows (eps, v) and diverges to NaN after one step.
-        # Master weights stay fp32; mixed precision is applied via autocast on CUDA only.
-        dtype=torch.float32,
-    )
 
 
 def param_groups(model, cfg: Config) -> list[dict]:
@@ -91,13 +75,20 @@ def predict_logits(model, loader, device) -> np.ndarray:
     return torch.cat(out).numpy()
 
 
-def kd_loss(student, teacher, labels, alpha: float, t: float) -> torch.Tensor:
-    """Hinton et al. (2015): alpha * CE(hard) + (1 - alpha) * T^2 * KL(teacher_T || student_T)."""
-    hard = F.cross_entropy(student, labels)
-    soft = F.kl_div(
-        F.log_softmax(student / t, dim=-1), F.softmax(teacher / t, dim=-1), reduction="batchmean"
-    )
-    return alpha * hard + (1 - alpha) * (t * t) * soft
+def kd_loss(student, teacher, labels, alpha: float, t: float, mask_teacher_errors=False):
+    """Hinton et al. (2015): alpha * CE(hard) + (1 - alpha) * T^2 * KL(teacher_T || student_T).
+
+    With mask_teacher_errors, rows where the teacher's argmax disagrees with the gold label
+    fall back to plain CE, so a confidently wrong teacher cannot cancel the gold label.
+    """
+    hard = F.cross_entropy(student, labels, reduction="none")
+    log_q = F.log_softmax(student / t, dim=-1)
+    p = F.softmax(teacher / t, dim=-1)
+    soft = (p * (torch.log(p.clamp_min(1e-12)) - log_q)).sum(-1)  # per-row KL
+    per_row = alpha * hard + (1 - alpha) * (t * t) * soft
+    if mask_teacher_errors:
+        per_row = torch.where(teacher.argmax(-1) == labels, per_row, hard)
+    return per_row.mean()
 
 
 def fit(cfg: Config, rows: list[dict], tokenizer, device, seed: int, teacher=None, log=print):
@@ -110,7 +101,7 @@ def fit(cfg: Config, rows: list[dict], tokenizer, device, seed: int, teacher=Non
     val_dl = make_loader(val_ds, tokenizer, cfg.eval_batch_size, shuffle=False)
     val_y = labels_of([rows[i] for i in val_idx])
 
-    model = load_model(cfg.model_name).to(device)
+    model = load_model(cfg.model_name, cfg.embedding_rank).to(device)
     opt = torch.optim.AdamW(param_groups(model, cfg))
     total_steps = cfg.epochs * len(train_dl)
     sched = get_linear_schedule_with_warmup(opt, int(cfg.warmup_ratio * total_steps), total_steps)
@@ -132,7 +123,12 @@ def fit(cfg: Config, rows: list[dict], tokenizer, device, seed: int, teacher=Non
             if teacher_t is not None:
                 d = cfg.distill
                 loss = kd_loss(
-                    logits, teacher_t[row_ids.to(device)], batch["labels"], d.alpha, d.temperature
+                    logits,
+                    teacher_t[row_ids.to(device)],
+                    batch["labels"],
+                    d.alpha,
+                    d.temperature,
+                    d.mask_teacher_errors,
                 )
             else:
                 loss = F.cross_entropy(logits, batch["labels"])
@@ -222,7 +218,7 @@ def run(cfg: Config) -> dict:
     sel = model_dir / "selected_seed.txt"
     if cfg.save_model and (not sel.exists() or sel.read_text() != str(best[0]["seed"])):
         print(f"warning: {model_dir} does not hold selected seed {best[0]['seed']}")
-    params = count_params(load_model(cfg.model_name))  # same shapes as the fine-tuned model
+    params = count_params(load_model(cfg.model_name, cfg.embedding_rank))  # same shapes
     accs = np.array([s["dev_acc"] for s in seeds_info])
     metrics = {
         "run_name": cfg.run_name,

@@ -9,11 +9,12 @@ import argparse
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoTokenizer
 
 from rte import ID2LABEL
 from rte.data import PairDataset, labels_of, load_jsonl, make_loader, write_jsonl
 from rte.device import pick_device
+from rte.modeling import load_checkpoint
 from rte.train import predict_logits
 
 
@@ -31,7 +32,7 @@ def main() -> None:
         ckpt = ckpt / "model"
     device = pick_device()
     tok = AutoTokenizer.from_pretrained(ckpt)
-    model = AutoModelForSequenceClassification.from_pretrained(ckpt, dtype=torch.float32).to(device)
+    model = load_checkpoint(ckpt).to(device)
 
     rows = load_jsonl(args.input)
     dl = make_loader(PairDataset(rows, tok, args.max_length), tok, args.batch_size, shuffle=False)

@@ -1,4 +1,4 @@
-# Student trained on hard labels only: the "no distillation" ablation. Runs locally on MPS.
+# Student trained on hard labels only: the "no distillation" ablation.
 run_name: student_deberta_v3_xsmall
 model_name: microsoft/deberta-v3-xsmall
 max_length: 256

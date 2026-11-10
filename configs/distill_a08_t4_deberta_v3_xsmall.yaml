@@ -1,0 +1,20 @@
+# Distillation fix B: more weight on gold labels (alpha 0.8) and softer teacher targets (T=4),
+# so the teacher's entailment bias is diluted. Otherwise identical to the plain student.
+run_name: distill_a08_t4_deberta_v3_xsmall
+model_name: microsoft/deberta-v3-xsmall
+max_length: 256
+seeds: [13, 21, 42, 87, 100]
+epochs: 15
+batch_size: 16
+lr: 5.0e-5
+head_lr: 1.0e-4
+layer_decay: 0.9
+weight_decay: 0.01
+warmup_ratio: 0.1
+val_fraction: 0.1
+patience: 4
+save_model: true
+distill:
+  teacher_logits: artifacts/teacher/teacher_logits_train.npy
+  alpha: 0.8
+  temperature: 4.0

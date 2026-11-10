@@ -30,6 +30,8 @@ On Colab, the notebook installs the same lock but filters out `torch`, `nvidia-*
 
 ```bash
 make data        # data/train.jsonl from the challenge zip (2,490), data/dev.jsonl = GLUE RTE validation (277)
+# no zip? `python scripts/prepare_data.py --out data` rebuilds train.jsonl from public GLUE RTE,
+# byte-identical to the challenge file (fingerprint-checked)
 make test        # unit tests (splits, padding, KD loss, param counting, configs)
 make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 ```
@@ -47,6 +49,12 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
    make predict RUN=outputs/distill_deberta_v3_xsmall
    make analyse RUN=outputs/distill_deberta_v3_xsmall
    ```
+
+### Sweeps (Colab, unattended)
+
+`notebooks/colab_sweep_a_distill.ipynb` (masked KD; alpha 0.8 / T 4) and `notebooks/colab_sweep_b_size.ipynb`
+(xsmall with a rank-128 factorised embedding, ~38M params; DeBERTa-v3-small) need no uploads or Drive: Runtime → Run all.
+Each run's outputs download as a zip when it finishes.
 
 ### Interrupted runs
 
@@ -68,9 +76,10 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 ```
 configs/    baseline_deberta_v3_base.yaml · student_deberta_v3_xsmall.yaml · distill_deberta_v3_xsmall.yaml
 scripts/    prepare_data.py
-src/rte/    data · config · device · seed · params · baselines · train · distill · predict · analysis · recover
-notebooks/  colab_teacher.ipynb · colab_student.ipynb
-tests/      test_data.py · test_recover.py
+src/rte/    data · config · device · seed · params · modeling · baselines · train · distill · predict · analysis · recover
+notebooks/  colab_teacher.ipynb · colab_student.ipynb · colab_sweep_a_distill.ipynb · colab_sweep_b_size.ipynb
+artifacts/  teacher/teacher_logits_train.npy (OOF teacher soft labels, so distillation needs no teacher rerun)
+tests/      test_data.py · test_modeling.py · test_recover.py
 ```
 
 ## Sanity baselines (dev)

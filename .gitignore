@@ -12,3 +12,6 @@ outputs/
 *.safetensors
 *.bin
 *.pt
+
+# small, reproducible teacher soft labels (see artifacts/teacher/README.md)
+!artifacts/teacher/*.npy
