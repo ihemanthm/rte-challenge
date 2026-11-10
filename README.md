@@ -50,7 +50,7 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 
 ### Interrupted runs
 
-- **Resume:** each finished seed (`outputs/<run>/seeds/`) and OOF fold (`outputs/<run>_oof/folds/`) is saved as soon as it completes. Re-running the same command skips them. The Colab notebooks link `outputs/` to `MyDrive/rte-challenge/outputs`, so an expired runtime keeps everything.
+- **Resume:** each finished seed (`outputs/<run>/seeds/`) and OOF fold (`outputs/<run>_oof/folds/`) is saved as soon as it completes. Re-running the same command skips them. On Colab, training writes to local disk and copies each finished seed/fold to `MyDrive/rte-challenge/outputs` (set via `RTE_MIRROR_DIR`), so an expired runtime keeps everything finished.
 - **Recover metrics from a log:** if the outputs are gone but the cell output survives, paste the `rte.train` log into a file and run
   `python -m rte.recover --config configs/baseline_deberta_v3_base.yaml --log teacher_log.txt`.
   It rebuilds `metrics.json` (per-seed val/dev accuracy, history, parameter counts) and flags it `recovered_from_log`. Dev probabilities, checkpoints and teacher logits cannot be recovered from a log.

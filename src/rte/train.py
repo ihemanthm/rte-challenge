@@ -25,7 +25,7 @@ from transformers import (
 )
 
 from rte import ID2LABEL, LABEL2ID
-from rte.config import Config, snapshot_environment
+from rte.config import Config, mirror, snapshot_environment
 from rte.data import (
     PairDataset,
     grouped_holdout,
@@ -190,7 +190,7 @@ def run(cfg: Config) -> dict:
     # Each finished seed is written to seeds/ at once, so a re-run (e.g. after a Colab
     # disconnect) skips it. The best-validation checkpoint is saved as soon as it appears.
     seed_dir, model_dir = run_dir / "seeds", run_dir / "model"
-    seed_dir.mkdir(exist_ok=True)
+    seed_dir.mkdir(parents=True, exist_ok=True)
     seeds_info, dev_probs, best = [], [], None  # best = (info, dev probs)
     for seed in cfg.seeds:
         info_f, probs_f = seed_dir / f"seed_{seed}.json", seed_dir / f"seed_{seed}_dev_probs.npy"
@@ -209,6 +209,7 @@ def run(cfg: Config) -> dict:
                 (model_dir / "selected_seed.txt").write_text(str(seed))
             np.save(probs_f, probs)  # marks the seed done, so written after the checkpoint
             info_f.write_text(json.dumps(info, indent=2))
+            mirror(run_dir)
             del model
             if device.type == "mps":
                 torch.mps.empty_cache()
@@ -238,6 +239,7 @@ def run(cfg: Config) -> dict:
     (run_dir / "params.json").write_text(json.dumps(params, indent=2))
     np.save(run_dir / "dev_probs_all_seeds.npy", np.stack(dev_probs))
     write_dev_predictions(dev_rows, best[1], run_dir / "dev_predictions.jsonl")
+    mirror(run_dir)
 
     print(
         f"\n{cfg.run_name}: dev acc {metrics['dev_acc_mean']:.4f} ± {metrics['dev_acc_std']:.4f} "
@@ -268,7 +270,7 @@ def run_oof(cfg: Config) -> np.ndarray:
     oof = np.zeros((len(rows), 2), dtype=np.float32)
     seed = cfg.seeds[0]
     fold_dir = run_dir / "folds"  # one file per finished fold, so a re-run resumes
-    fold_dir.mkdir(exist_ok=True)
+    fold_dir.mkdir(parents=True, exist_ok=True)
     for k, (tr_idx, ho_idx) in enumerate(grouped_kfold(rows, cfg.oof_folds)):
         fold_f = fold_dir / f"fold_{k}.npy"
         if fold_f.exists():
@@ -285,10 +287,12 @@ def run_oof(cfg: Config) -> np.ndarray:
         )
         oof[ho_idx] = predict_logits(model, ho_dl, device)
         np.save(fold_f, oof[ho_idx])
+        mirror(run_dir)
         del model
     acc = float((oof.argmax(-1) == labels_of(rows)).mean())
     np.save(run_dir / "teacher_logits_train.npy", oof)
     (run_dir / "oof_metrics.json").write_text(json.dumps({"oof_acc": acc, "seed": seed}, indent=2))
+    mirror(run_dir)
     print(f"OOF accuracy {acc:.4f} -> {run_dir / 'teacher_logits_train.npy'}")
     return oof
 

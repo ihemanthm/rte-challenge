@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
+import shutil
+import time
 from dataclasses import asdict, dataclass, field
 from importlib import metadata
 from pathlib import Path
@@ -57,6 +60,36 @@ class Config:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def mirror(run_dir: Path) -> None:
+    """Copy new/changed files of run_dir to $RTE_MIRROR_DIR/<run> (e.g. Google Drive).
+
+    Training writes to fast local disk; the mirror keeps finished seeds/folds safe if the
+    runtime is lost. Mirror failures (flaky network mounts) warn but never stop training.
+    """
+    root = os.environ.get("RTE_MIRROR_DIR")
+    if not root:
+        return
+    dest_root = Path(root) / run_dir.name
+    for attempt in range(1, 4):
+        try:
+            for src in sorted(run_dir.rglob("*")):
+                if not src.is_file():
+                    continue
+                dest = dest_root / src.relative_to(run_dir)
+                st = src.stat()
+                if dest.exists():
+                    dt = dest.stat()
+                    if dt.st_size == st.st_size and int(dt.st_mtime) == int(st.st_mtime):
+                        continue
+                os.makedirs(dest.parent, exist_ok=True)
+                shutil.copy2(src, dest)
+            return
+        except OSError as e:
+            print(f"warning: mirror to {dest_root} failed (attempt {attempt}/3): {e}")
+            time.sleep(5 * attempt)
+    print(f"warning: {dest_root} may be incomplete; local {run_dir} is intact")
 
 
 def snapshot_environment(run_dir: Path, cfg: Config) -> None:
