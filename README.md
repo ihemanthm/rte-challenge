@@ -39,6 +39,7 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
    - exports out-of-fold teacher logits → `outputs/baseline_deberta_v3_base_oof/teacher_logits_train.npy`
 
    Download `teacher_artifacts.zip` and unzip it in the project root.
+   The student runs (steps 2–3) can also run on Colab via `notebooks/colab_student.ipynb`.
 2. **Student without distillation (ablation, local MPS):** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`
 3. **Distilled student (submission):** `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`
 4. **Predictions and error analysis:**
