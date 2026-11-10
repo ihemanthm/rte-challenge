@@ -50,3 +50,25 @@ def test_factorised_checkpoint_round_trip(tmp_path):
     loaded = load_checkpoint(tmp_path).eval()
     assert loaded.config.embedding_rank == 4
     assert torch.allclose(loaded(input_ids=ids).logits, model(input_ids=ids).logits, atol=1e-6)
+
+
+def test_pruned_vocab_matches_full_model_on_kept_tokens(tmp_path):
+    from rte.modeling import prune_vocab
+
+    model = tiny_deberta()
+    ids = torch.randint(4, 20, (3, 7))
+    ids[:, 0] = 1
+    before = model(input_ids=ids).logits
+    kept = prune_vocab(model, keep_ids=range(0, 20), unk_id=3)
+    assert kept == 20
+    assert count_params(model)["word_embedding"] == 20 * 16
+    assert torch.allclose(model(input_ids=ids).logits, before, atol=1e-6)
+    # a dropped token behaves like [UNK]
+    out_of_vocab, as_unk = ids.clone(), ids.clone()
+    out_of_vocab[0, 3], as_unk[0, 3] = 40, 3
+    assert torch.allclose(model(input_ids=out_of_vocab).logits, model(input_ids=as_unk).logits)
+    model.save_pretrained(tmp_path)
+    loaded = load_checkpoint(tmp_path).eval()
+    assert torch.allclose(
+        loaded(input_ids=out_of_vocab).logits, model(input_ids=out_of_vocab).logits
+    )

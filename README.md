@@ -55,6 +55,20 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 `notebooks/colab_sweep_a_distill.ipynb` (masked KD; alpha 0.8 / T 4) and `notebooks/colab_sweep_b_size.ipynb`
 (xsmall with a rank-128 factorised embedding, ~38M params; DeBERTa-v3-small) need no uploads or Drive: Runtime → Run all.
 Each run's outputs download as a zip when it finishes.
+Result: the rank-128 embedding collapses (dev 51.0, near chance: it discards too much of the
+pretrained embedding), and DeBERTa-v3-small (141.9M) is no better than xsmall (76.5 vs 77.7).
+
+### Vocabulary pruning (post-hoc, no retraining)
+
+```bash
+python -m rte.prune --checkpoint outputs/distill_deberta_v3_xsmall --out outputs/distill_deberta_v3_xsmall_pruned
+python -m rte.predict --checkpoint outputs/distill_deberta_v3_xsmall_pruned --input data/dev.jsonl
+```
+Keeps the embedding rows of the training-set tokens plus the top-N tokens by the tokenizer's own
+unigram frequency; every other token maps to `[UNK]` (the tokenizer is unchanged). N is picked on
+train alone (98% token coverage of one half of train by the other half plus top-N). On rows made
+only of kept tokens the outputs are identical to the full model. `prune.json` records coverage,
+dev agreement with the full model and the params-vs-dev-accuracy curve over N.
 
 ### Interrupted runs
 
@@ -76,7 +90,7 @@ Each run's outputs download as a zip when it finishes.
 ```
 configs/    baseline_deberta_v3_base.yaml · student_deberta_v3_xsmall.yaml · distill_deberta_v3_xsmall.yaml
 scripts/    prepare_data.py
-src/rte/    data · config · device · seed · params · modeling · baselines · train · distill · predict · analysis · recover
+src/rte/    data · config · device · seed · params · modeling · baselines · train · distill · predict · prune · analysis · recover
 notebooks/  colab_teacher.ipynb · colab_student.ipynb · colab_sweep_a_distill.ipynb · colab_sweep_b_size.ipynb
 artifacts/  teacher/teacher_logits_train.npy (OOF teacher soft labels, so distillation needs no teacher rerun)
 tests/      test_data.py · test_modeling.py · test_recover.py
