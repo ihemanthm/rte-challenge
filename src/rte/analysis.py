@@ -24,7 +24,11 @@ def tag(rows: list[dict]) -> dict[str, np.ndarray]:
     plen = np.array([len(r["premise"].split()) for r in rows])
     gold_ent = np.array([r["label"] == "entailment" for r in rows])
     return {
-        "negation_in_hypothesis": np.array([bool(NEG.search(r["hypothesis"])) for r in rows]),
+        # negation in exactly one side: the hypothesis may contradict or drop the premise's polarity
+        # (negation inside the hypothesis alone is too rare in RTE dev to measure: n=2)
+        "negation_mismatch": np.array(
+            [bool(NEG.search(r["premise"])) != bool(NEG.search(r["hypothesis"])) for r in rows]
+        ),
         "numbers_or_dates": np.array([bool(NUM.search(r["hypothesis"])) for r in rows]),
         "long_premise_p90": plen >= np.percentile(plen, 90),
         "high_overlap_not_entailed": (ov >= 0.8) & ~gold_ent,  # lexical-overlap trap

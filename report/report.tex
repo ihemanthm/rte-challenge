@@ -1,0 +1,98 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs,tabularx,graphicx,amsmath}
+\usepackage[hidelinks]{hyperref}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.2em}
+\setlength{\parskip}{3pt}
+\sloppy
+
+\title{\vspace{-1.6em}\textbf{Small Model, Honest Numbers: A Vocabulary-Pruned DeBERTa-v3-xsmall for RTE}}
+\author{[Student name] \quad [Roll number] \quad CS6315E Neural Networks and Deep Learning\\
+\small Code: \url{https://github.com/ihemanthm/rte-challenge}}
+\date{\vspace{-2em}}
+
+\begin{document}
+\maketitle
+
+\vspace{-1.2em}\section{Approach}
+\textbf{Model choice.} Since accuracy is weighed against size, I compared three sizes of one pretrained family, DeBERTa-v3~\cite{he2021deberta,he2023debertav3} (base 184M, small 142M, xsmall 71M), with identical code. v3-base is my reference baseline and the distillation teacher; v3-xsmall is the student.
+
+\textbf{Fine-tuning protocol.} One config-driven training path for all models: AdamW, 10\% linear warm-up then decay, layer-wise LR decay 0.9, separate head LR, max length 256, batch 16, early stopping on validation accuracy. With 2,490 training pairs results swing with the seed~\cite{mosbach2021stability}, so every configuration uses 5 seeds (mean $\pm$ sd). All decisions (early stopping, checkpoint and model selection, pruning level) use a 10\% validation split of train that is \emph{grouped by premise}, so near-duplicate pairs never straddle it. The dev set (277) is used only to report.
+
+\textbf{Distillation.} Teacher soft labels are computed \emph{out-of-fold}: five DeBERTa-v3-base models, each trained on four premise-grouped folds, predict the fifth (OOF accuracy 82.9\%). The student minimises $\alpha\,\mathrm{CE}(y, s) + (1-\alpha)\,T^2\,\mathrm{KL}(\sigma(t/T)\,\|\,\sigma(s/T))$~\cite{hinton2015distilling} with $\alpha{=}0.5$, $T{=}2$, plus two variants: \emph{masked} KD (pure CE on rows the teacher gets wrong) and $\alpha{=}0.8$, $T{=}4$.
+
+\textbf{Vocabulary pruning.} 49.2M of xsmall's 70.8M parameters are the $128{,}100\times384$ word embedding, yet RTE uses about 19k tokens. After training, I keep only the embedding rows of: special tokens $\cup$ every training-set token $\cup$ the top-$N$ tokens ranked by the tokenizer's own unigram log-probabilities~\cite{kudo2018subword}; all other ids map to \texttt{[UNK]} through a fixed lookup table~\cite{abdaoui2020load}. On input made only of kept tokens the pruned model is \emph{exactly} the original. $N$ is chosen on train alone: the smallest $N$ for which one half of train covers 98\% of the other half's tokens (giving $N{=}60{,}000$, 62,245 rows kept). I also tried a rank-128 SVD factorisation of the embedding (38.1M parameters).
+
+\section{Results}
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}Xrrrr@{}}
+\toprule
+Model & Total params & Non-emb. & Dev acc.\ (5 seeds) & Val acc. \\
+\midrule
+Majority / word overlap / TF-IDF + LR & -- & -- & 52.7 / 57.4 / 57.0 & -- \\
+\textbf{Instructor reference baseline} & [TBD] & [TBD] & [TBD] & -- \\
+DeBERTa-v3-base (my baseline, teacher) & 184.4M & 86.0M & $84.8 \pm 1.1$ & 86.2 \\
+DeBERTa-v3-small & 141.9M & 43.5M & $76.5 \pm 1.4$ & 75.1 \\
+DeBERTa-v3-xsmall, plain fine-tuning & 70.8M & 21.6M & $77.7 \pm 2.1$ & 78.5 \\
+\quad + KD ($\alpha$ 0.5, $T$ 2) & 70.8M & 21.6M & $76.8 \pm 1.6$ & 78.4 \\
+\quad + masked KD ($\alpha$ 0.5, $T$ 2) & 70.8M & 21.6M & [pending] & [pending] \\
+\quad + KD ($\alpha$ 0.8, $T$ 4) & 70.8M & 21.6M & [pending] & [pending] \\
+\quad rank-128 factorised embedding & 38.1M & 21.6M & $51.0 \pm 5.0$ & 57.6 \\
+\midrule
+\textbf{Submission}: best-validation xsmall checkpoint, vocab-pruned & \textbf{45.5M} & 21.6M & \textbf{80.1} (1 ckpt) & 81.0 \\
+\quad same checkpoint before pruning & 70.8M & 21.6M & 80.9 (1 ckpt) & 81.0 \\
+\bottomrule
+\end{tabularx}
+\caption{GLUE RTE dev accuracy (\%). ``Val'' (mean best validation accuracy) is the only number used for selection. The submission is one checkpoint (seed 21) picked by validation, so its dev score is optimistic; the 5-seed mean (77.7) estimates the method.}
+\label{tab:results}
+\end{table}
+
+The submission has \textbf{4.0$\times$ fewer parameters} than DeBERTa-v3-base (45.5M vs.\ 184.4M) and 2.1$\times$ fewer non-embedding parameters than v3-small. Against my v3-base baseline it is 5.4 points lower on dev for the selected checkpoints (85.6 vs.\ 80.1; McNemar $p{=}0.058$, 35 vs.\ 20 discordant pairs) and about 7 points lower on 5-seed means. Pruning flipped 10 of 277 dev predictions (6 wrong, 4 right; $p{=}0.75$).
+
+\textbf{Distillation did not improve accuracy.} KD at $\alpha{=}0.5$ scored $-0.9$ points versus plain fine-tuning (paired $t{=}-1.29$ over seeds; McNemar $p{=}0.31$: not significant). It did make the student better calibrated (dev log-loss 0.74 vs.\ 0.99) and more stable across seeds (92\% vs.\ 88\% pairwise prediction agreement). The reason is a bias in the teacher: on train it predicts \emph{entailment} for 57.8\% of pairs against 50.2\% gold, and 72\% of its OOF errors are on not-entailment pairs. The distilled student inherits it (61.5\% entailment predictions on dev). The masked and softer variants test whether removing the wrong soft labels fixes this.
+
+\section{Accuracy vs.\ parameters}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/acc_vs_params.pdf}\vspace{-0.6em}
+\caption{(a) Dev accuracy (mean $\pm$ sd over 5 seeds) against total parameters; the star is the pruned submission (single checkpoint). (b) Pruning curve for the selected xsmall checkpoint: train tokens plus the top-$N$ frequent tokens, $N \in \{0,\dots,60\text{k}, \text{all}\}$.}
+\label{fig:params}
+\end{figure}
+
+\textbf{Larger is not automatically better here} (Fig.~\ref{fig:params}a). v3-small has twice xsmall's parameters and twice its non-embedding parameters, but scored lower on both validation (75.1 vs.\ 78.5) and dev (76.5 vs.\ 77.7); it fits the 2.2k training pairs within 3--4 epochs and then only memorises. The large jump is to v3-base (+7 points), which is wider (768 vs.\ 384 hidden) \emph{and} deeper than small, so on this data the benefit comes from pretraining capacity per layer rather than from raw parameter count, most of which is embedding table in all three.
+
+\textbf{Where parameters can be cut matters more than how many.} Shrinking the embedding by SVD at rank 128 kept only 57.5\% of its energy; training loss stayed at chance (0.70) for 4--5 epochs on every seed and the model never recovered (51.0\%). Pruning the vocabulary instead removes rows that never fire, so the remaining model is unchanged: $-36\%$ parameters for $-0.7$ points. Fig.~\ref{fig:params}b shows a smaller version would do worse: keeping only training tokens (28.7M) costs 5.4 points, because unseen dev tokens are mostly rare names, and only 98.5\% of dev tokens (60\% of pairs) are fully covered even at $N{=}60$k.
+
+\section{Error analysis}
+The submission makes 55 errors on dev. 34 are false \emph{entailment} predictions (error rate 26.0\% on gold not-entailment vs.\ 14.4\% on entailment), so the model over-predicts entailment (57.4\% vs.\ 52.7\% gold). Automatic tags, error rate on each subset (overall 19.9\%): high lexical overlap ($\geq$80\%) but not entailed 42.1\% ($n{=}38$); low overlap ($<$50\%) but entailed 42.9\% (14); top-10\% long premises 28.6\% (28); numbers/dates in the hypothesis 27.1\% (48); negation in exactly one side 25.0\% (40), so negation is not a major error source here.
+
+I hand-labelled a random sample of 25 errors (seed 0; \texttt{report/error\_annotation.csv}):
+\begin{itemize}
+\item \textbf{Overlap, unsupported claim (6, all false entailments).} The hypothesis reuses premise words but changes a role or adds a detail: ``Doha, the capital of Qatar'' $\to$ ``Qatar is located in Doha''; ``a substance found in red wine'' $\to$ ``red wine''. This is the lexical-overlap heuristic known from NLI models~\cite{mccoy2019right}.
+\item \textbf{Paraphrase missed (5, false non-entailments).} ``BSE, the so-called mad cow disease'', ``NYT column'' $\to$ works for the \emph{New York Times}; two of these sit inside long premises.
+\item \textbf{World knowledge (5).} Four entailments need background facts (Renault is European; asked to form a government $\Rightarrow$ new prime minister). In one false entailment the model used outside knowledge the premise does not state (George W.\ Bush's wife is Laura).
+\item \textbf{Modality, quantifiers, precision (4).} ``asked the government to investigate'' $\to$ ``investigates''; ``ready to be used'' $\to$ ``is used''; ``only those who can afford'' $\to$ ``all parents''; ``nearly 4 percent'' $\to$ ``4 percent''.
+\item \textbf{Other (5):} number binding (32 \emph{populations} read as 32 pandas; an age attached to the wrong person), two near the threshold ($p\approx0.42$), one doubtful gold label.
+\end{itemize}
+
+\section{Reflection}
+Counting \emph{where} the parameters are paid off most: post-hoc vocabulary pruning is cheap, exact on covered text, and gave the largest efficiency gain. Logit distillation from a biased teacher, factorising the embedding and a bigger student did not help. \textbf{With more time/compute:} (i) prune the vocabulary \emph{before} fine-tuning and use the saved budget for a wider backbone; (ii) intermediate-layer or attention distillation instead of logits only, with the teacher's entailment bias corrected (class re-weighting or temperature per class); (iii) train-only data augmentation targeting the error classes above (role swaps, modality and quantifier edits of training hypotheses as not-entailment); (iv) a 6-layer xsmall to extend the size curve downward; (v) more seeds to tighten the $\pm2$-point seed spread, which is larger than most effects measured here.
+
+\textbf{Reproducibility.} Pinned \texttt{uv} environment; every run stores config, package versions, parameter counts and per-seed results; two teacher runs gave byte-identical OOF logits. \texttt{make venv data train submission} reproduces the submission.
+
+\small
+\begin{thebibliography}{9}\setlength{\itemsep}{0pt}
+\bibitem{abdaoui2020load} A.~Abdaoui, C.~Pradel, G.~Sigel. Load What You Need: Smaller Versions of Multilingual BERT. \emph{SustaiNLP}, 2020.
+\bibitem{he2021deberta} P.~He, X.~Liu, J.~Gao, W.~Chen. DeBERTa: Decoding-enhanced BERT with Disentangled Attention. \emph{ICLR}, 2021.
+\bibitem{he2023debertav3} P.~He, J.~Gao, W.~Chen. DeBERTaV3: Improving DeBERTa using ELECTRA-Style Pre-Training with Gradient-Disentangled Embedding Sharing. \emph{ICLR}, 2023.
+\bibitem{hinton2015distilling} G.~Hinton, O.~Vinyals, J.~Dean. Distilling the Knowledge in a Neural Network. \emph{arXiv:1503.02531}, 2015.
+\bibitem{kudo2018subword} T.~Kudo. Subword Regularization: Improving Neural Network Translation Models with Multiple Subword Candidates. \emph{ACL}, 2018.
+\bibitem{mccoy2019right} R.~T.~McCoy, E.~Pavlick, T.~Linzen. Right for the Wrong Reasons: Diagnosing Syntactic Heuristics in Natural Language Inference. \emph{ACL}, 2019.
+\bibitem{mosbach2021stability} M.~Mosbach, M.~Andriushchenko, D.~Klakow. On the Stability of Fine-tuning BERT. \emph{ICLR}, 2021.
+\end{thebibliography}
+\end{document}

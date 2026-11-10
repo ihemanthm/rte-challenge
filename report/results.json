@@ -1,0 +1,81 @@
+{
+  "runs": [
+    {
+      "run": "baseline_deberta_v3_base",
+      "label": "teacher\nv3-base",
+      "role": "teacher",
+      "params": 184423682,
+      "non_emb": 86042882,
+      "dev_mean": 84.83754512635379,
+      "dev_std": 1.112710108839165,
+      "val_mean": 86.16232560743228,
+      "selected_seed": 21,
+      "selected_dev": 85.5595667870036
+    },
+    {
+      "run": "student_deberta_v3_small",
+      "label": "v3-small",
+      "role": "other",
+      "params": 141896450,
+      "non_emb": 43515650,
+      "dev_mean": 76.53429602888086,
+      "dev_std": 1.4440433212996422,
+      "val_mean": 75.12434238448411,
+      "selected_seed": 87,
+      "selected_dev": 78.33935018050542
+    },
+    {
+      "run": "student_deberta_v3_xsmall",
+      "label": "v3-xsmall",
+      "role": "student",
+      "params": 70830722,
+      "non_emb": 21640322,
+      "dev_mean": 77.68953068592057,
+      "dev_std": 2.064401221010221,
+      "val_mean": 78.49000908870252,
+      "selected_seed": 21,
+      "selected_dev": 80.86642599277978
+    },
+    {
+      "run": "distill_deberta_v3_xsmall",
+      "label": "xsmall + KD",
+      "role": "student",
+      "params": 70830722,
+      "non_emb": 21640322,
+      "dev_mean": 76.75090252707581,
+      "dev_std": 1.6265531156778072,
+      "val_mean": 78.40485020306825,
+      "selected_seed": 100,
+      "selected_dev": 77.6173285198556
+    },
+    {
+      "run": "student_deberta_v3_xsmall_emb128",
+      "label": "xsmall, rank-128 emb",
+      "role": "failed",
+      "params": 38086274,
+      "non_emb": 21640322,
+      "dev_mean": 51.04693140794223,
+      "dev_std": 4.96045170752857,
+      "val_mean": 57.569336547330195,
+      "selected_seed": 13,
+      "selected_dev": 58.844765342960294
+    }
+  ],
+  "pruned": {
+    "top_n": 60000,
+    "kept_rows": 62245,
+    "dev_acc_full": 0.8086642599277978,
+    "dev_acc_pruned": 0.8014440433212996,
+    "dev_prediction_agreement": 0.9638989169675091,
+    "dev_coverage": {
+      "token_coverage": 0.9852900817827542,
+      "rows_fully_covered": 0.5992779783393501
+    },
+    "params": {
+      "total": 45542402,
+      "trainable": 45542402,
+      "word_embedding": 23902080,
+      "non_embedding": 21640322
+    }
+  }
+}

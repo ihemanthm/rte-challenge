@@ -1,0 +1,382 @@
+<title>Small Model, Honest Numbers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column of talk segments; each segment = claim, diagram, takeaway. Teacher is amber, student is indigo everywhere. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #151922; --muted: #596173; --line: #d6dbe4; --faint: #e9edf3;
+  --teacher: #a86400; --teacher-soft: #fbefdc; --student: #3a47c9; --student-soft: #e6e9fc;
+  --good: #1d7f55; --bad: #b73b26;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1116; --surface: #161a21; --ink: #e6e9ef; --muted: #9aa2b2; --line: #2b313c; --faint: #1d222b;
+  --teacher: #f0a640; --teacher-soft: #33260f; --student: #949fff; --student-soft: #1e2246;
+  --good: #4fc28d; --bad: #f07a62; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #161a21; --ink: #e6e9ef; --muted: #9aa2b2; --line: #2b313c; --faint: #1d222b;
+  --teacher: #f0a640; --teacher-soft: #33260f; --student: #949fff; --student-soft: #1e2246;
+  --good: #4fc28d; --bad: #f07a62; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 48px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 64px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.12; }
+h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.t { color: var(--teacher); font-weight: 600; } .s { color: var(--student); font-weight: 600; }
+.good { color: var(--good); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; }
+
+header { display: grid; gap: 20px; }
+header .lede { font-size: 1.2rem; color: var(--muted); max-width: 60ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 10px 28px; font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 600; }
+
+section { display: grid; gap: 18px; }
+section > .head { display: grid; gap: 6px; }
+.step { font-family: var(--mono); font-size: 0.8rem; color: var(--student); font-weight: 600; letter-spacing: 0.06em; }
+.take { border-left: 3px solid var(--student); padding: 4px 0 4px 16px; max-width: 68ch; font-weight: 600; }
+.take.warn { border-color: var(--teacher); }
+
+.fig { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; }
+.fig svg { display: block; width: 100%; min-width: 680px; height: auto; }
+.fig.narrow svg { min-width: 520px; }
+.cap { font-size: 0.85rem; color: var(--muted); margin-top: 8px; max-width: none; }
+
+/* svg tokens */
+.box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.box-t { fill: var(--teacher-soft); stroke: var(--teacher); stroke-width: 1.5; }
+.box-s { fill: var(--student-soft); stroke: var(--student); stroke-width: 1.5; }
+.box-f { fill: var(--faint); stroke: var(--line); stroke-width: 1; }
+.lbl { fill: var(--ink); font-family: var(--body); font-size: 14px; font-weight: 600; }
+.sub { fill: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+.lt { fill: var(--teacher); } .ls { fill: var(--student); } .lg { fill: var(--good); } .lb { fill: var(--bad); }
+.arrow { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#ah); }
+.arrow-t { stroke: var(--teacher); stroke-width: 1.8; fill: none; marker-end: url(#aht); stroke-dasharray: 5 4; }
+.ahead { fill: var(--muted); } .ahead-t { fill: var(--teacher); }
+.grid { stroke: var(--faint); stroke-width: 1; }
+.axis { stroke: var(--line); stroke-width: 1.2; }
+.tick { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.dot-t { fill: var(--teacher); } .dot-s { fill: var(--student); } .dot-bad { fill: var(--bad); } .dot-m { fill: var(--muted); }
+.ring-s { fill: var(--surface); stroke: var(--student); stroke-width: 2; }
+.lineplot { fill: none; stroke: var(--student); stroke-width: 2; }
+.ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.hl { fill: var(--good); }
+
+.example { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; }
+.example .row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.example .k { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); padding-top: 3px; }
+.pill { display: inline-block; font-family: var(--mono); font-size: 0.8rem; padding: 2px 10px; border-radius: 99px; background: var(--faint); border: 1px solid var(--line); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.card .big { font-family: var(--display); font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--faint); font-size: 0.95rem; }
+th { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.n { font-family: var(--mono); text-align: right; } th.n { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+tr.pick td { background: var(--student-soft); }
+.pending { color: var(--muted); font-style: italic; }
+
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 68ch; }
+footer { color: var(--muted); font-size: 0.85rem; display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 20px; }
+a { color: var(--student); }
+a:focus-visible { outline: 2px solid var(--student); outline-offset: 2px; }
+@media (max-width: 560px) { body { font-size: 16px; } .example .row { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker>
+    <marker id="aht" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead-t"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">CS6315E Neural Networks &amp; Deep Learning · RTE Challenge</div>
+  <h1>Small model, honest numbers</h1>
+  <p class="lede">How far can a 22M-parameter encoder get on textual entailment, what does a big teacher actually transfer, and where do the parameters really go?</p>
+  <div class="facts">
+    <span>train <b>2,490</b></span><span>dev <b>277</b></span><span>labels <b>entailment / not_entailment</b></span>
+    <span>seeds per config <b>5</b></span><span>graded on <b>accuracy × parameters</b></span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section>
+  <div class="head"><div class="step">1 · THE TASK</div><h2>Does the premise make the hypothesis true?</h2></div>
+  <div class="example">
+    <div class="row"><span class="k">premise</span><span>Dana Reeve, the widow of the actor Christopher Reeve, has died of lung cancer at age 44, according to the Christopher Reeve Foundation.</span></div>
+    <div class="row"><span class="k">hypothesis</span><span>Christopher Reeve had an accident.</span></div>
+    <div class="row"><span class="k">gold label</span><span><span class="pill">not_entailment</span> &nbsp;<span class="cap" style="display:inline">true in the world, but the premise never says it</span></span></div>
+  </div>
+  <p>RTE is small (2.5k training pairs) and hard: word overlap alone gets 57.4% on dev and the majority class gets 52.7%. The challenge grades accuracy <em>together with</em> parameter count, so the question is never just “what scores highest”.</p>
+</section>
+
+<!-- 2 -->
+<section>
+  <div class="head"><div class="step">2 · THE PLAN</div><h2>One pipeline, one code path, only the config changes</h2></div>
+  <div class="fig">
+    <svg viewBox="0 0 960 330" role="img" aria-label="Pipeline: data feeds a DeBERTa-v3-base teacher and xsmall students; teacher out-of-fold logits feed distillation; the chosen student is vocabulary-pruned for submission.">
+      <rect x="10" y="130" width="150" height="70" rx="8" class="box"/>
+      <text x="85" y="160" text-anchor="middle" class="lbl">RTE train</text>
+      <text x="85" y="180" text-anchor="middle" class="sub">2,490 pairs</text>
+
+      <rect x="220" y="30" width="200" height="74" rx="8" class="box-t"/>
+      <text x="320" y="60" text-anchor="middle" class="lbl">Teacher / baseline</text>
+      <text x="320" y="80" text-anchor="middle" class="sub">DeBERTa-v3-base · 184M</text>
+      <text x="320" y="95" text-anchor="middle" class="sub lt">dev 84.8</text>
+
+      <rect x="480" y="30" width="200" height="74" rx="8" class="box-t"/>
+      <text x="580" y="60" text-anchor="middle" class="lbl">Out-of-fold soft labels</text>
+      <text x="580" y="80" text-anchor="middle" class="sub">5 folds by premise</text>
+      <text x="580" y="95" text-anchor="middle" class="sub">2,490 × 2 logits</text>
+
+      <rect x="220" y="226" width="200" height="74" rx="8" class="box-s"/>
+      <text x="320" y="256" text-anchor="middle" class="lbl">Plain student</text>
+      <text x="320" y="276" text-anchor="middle" class="sub">DeBERTa-v3-xsmall · 71M</text>
+      <text x="320" y="291" text-anchor="middle" class="sub ls">gold labels only</text>
+
+      <rect x="480" y="226" width="200" height="74" rx="8" class="box-s"/>
+      <text x="580" y="256" text-anchor="middle" class="lbl">Distilled student</text>
+      <text x="580" y="276" text-anchor="middle" class="sub">same model, same recipe</text>
+      <text x="580" y="291" text-anchor="middle" class="sub ls">CE + KL to teacher</text>
+
+      <rect x="740" y="130" width="200" height="70" rx="8" class="box"/>
+      <text x="840" y="158" text-anchor="middle" class="lbl">Vocabulary pruning</text>
+      <text x="840" y="178" text-anchor="middle" class="sub">best by validation → 46M</text>
+
+      <path d="M160 150 C190 150 190 67 218 67" class="arrow"/>
+      <path d="M160 180 C190 180 190 263 218 263" class="arrow"/>
+      <path d="M420 67 L478 67" class="arrow-t"/>
+      <path d="M580 104 L580 224" class="arrow-t"/>
+      <path d="M420 263 L478 263" class="arrow" style="stroke-dasharray:2 4" />
+      <path d="M680 263 C712 263 712 180 738 180" class="arrow"/>
+      <path d="M420 290 C600 330 712 300 738 192" class="arrow" />
+      <text x="449" y="255" text-anchor="middle" class="sub">compare</text>
+    </svg>
+    <p class="cap">Amber = teacher side, indigo = student side. Dev (277) is touched only to report numbers; every choice is made on a 10% validation split of train, grouped by premise so near-duplicate pairs never straddle it.</p>
+  </div>
+  <ul class="plain">
+    <li>Every run: 5 seeds, early stopping on validation, layer-wise LR decay 0.9, separate head LR, max length 256.</li>
+    <li>Each run writes its config, package versions, parameter counts, per-seed metrics and dev predictions.</li>
+    <li>Teacher trained on Colab (T4); students on Colab and Apple-silicon MPS with identical code.</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section>
+  <div class="head"><div class="step">3 · TEACHER SOFT LABELS</div><h2>Never let the teacher grade its own homework</h2></div>
+  <p>A model's logits on examples it trained on are near-certain and carry no “dark knowledge”. So the soft labels come <em>out of fold</em>: five teachers, each predicting only the fifth of train it never saw.</p>
+  <div class="fig narrow">
+    <svg viewBox="0 0 760 250" role="img" aria-label="Five-fold out-of-fold scheme: in each row one fold is predicted by a model trained on the other four.">
+      <text x="10" y="22" class="sub">train split into 5 premise-grouped folds (~498 pairs each)</text>
+      <g>
+        <!-- rows -->
+        <text x="10" y="58" class="sub">model 1</text><text x="10" y="98" class="sub">model 2</text><text x="10" y="138" class="sub">model 3</text><text x="10" y="178" class="sub">model 4</text><text x="10" y="218" class="sub">model 5</text>
+        <rect x="80" y="40" width="88" height="28" rx="4" class="box-t"/><rect x="172" y="40" width="88" height="28" rx="4" class="box-f"/><rect x="264" y="40" width="88" height="28" rx="4" class="box-f"/><rect x="356" y="40" width="88" height="28" rx="4" class="box-f"/><rect x="448" y="40" width="88" height="28" rx="4" class="box-f"/>
+        <rect x="80" y="80" width="88" height="28" rx="4" class="box-f"/><rect x="172" y="80" width="88" height="28" rx="4" class="box-t"/><rect x="264" y="80" width="88" height="28" rx="4" class="box-f"/><rect x="356" y="80" width="88" height="28" rx="4" class="box-f"/><rect x="448" y="80" width="88" height="28" rx="4" class="box-f"/>
+        <rect x="80" y="120" width="88" height="28" rx="4" class="box-f"/><rect x="172" y="120" width="88" height="28" rx="4" class="box-f"/><rect x="264" y="120" width="88" height="28" rx="4" class="box-t"/><rect x="356" y="120" width="88" height="28" rx="4" class="box-f"/><rect x="448" y="120" width="88" height="28" rx="4" class="box-f"/>
+        <rect x="80" y="160" width="88" height="28" rx="4" class="box-f"/><rect x="172" y="160" width="88" height="28" rx="4" class="box-f"/><rect x="264" y="160" width="88" height="28" rx="4" class="box-f"/><rect x="356" y="160" width="88" height="28" rx="4" class="box-t"/><rect x="448" y="160" width="88" height="28" rx="4" class="box-f"/>
+        <rect x="80" y="200" width="88" height="28" rx="4" class="box-f"/><rect x="172" y="200" width="88" height="28" rx="4" class="box-f"/><rect x="264" y="200" width="88" height="28" rx="4" class="box-f"/><rect x="356" y="200" width="88" height="28" rx="4" class="box-f"/><rect x="448" y="200" width="88" height="28" rx="4" class="box-t"/>
+      </g>
+      <rect x="572" y="40" width="14" height="14" rx="3" class="box-f"/><text x="594" y="52" class="sub">train on these 4</text>
+      <rect x="572" y="66" width="14" height="14" rx="3" class="box-t"/><text x="594" y="78" class="sub">predict this one</text>
+      <text x="572" y="128" class="lbl">stitch the 5 amber</text>
+      <text x="572" y="148" class="lbl">blocks together</text>
+      <text x="572" y="172" class="sub">→ unbiased logits for</text>
+      <text x="572" y="188" class="sub">  all 2,490 pairs</text>
+      <text x="572" y="214" class="sub lt">OOF accuracy 82.9%</text>
+    </svg>
+  </div>
+  <p class="take warn">Reproducibility check: two independent Colab runs produced byte-identical teacher logits.</p>
+</section>
+
+<!-- 4 -->
+<section>
+  <div class="head"><div class="step">4 · DISTILLATION</div><h2>Gold labels plus the teacher's opinion</h2></div>
+  <div class="fig narrow">
+    <svg viewBox="0 0 760 210" role="img" aria-label="Distillation loss: alpha times cross-entropy with gold labels plus one minus alpha times T squared times KL divergence between temperature-softened teacher and student distributions.">
+      <rect x="10" y="20" width="150" height="54" rx="8" class="box-s"/><text x="85" y="44" text-anchor="middle" class="lbl">student logits</text><text x="85" y="62" text-anchor="middle" class="sub">xsmall</text>
+      <rect x="10" y="134" width="150" height="54" rx="8" class="box-t"/><text x="85" y="158" text-anchor="middle" class="lbl">teacher logits</text><text x="85" y="176" text-anchor="middle" class="sub">out-of-fold</text>
+      <rect x="230" y="134" width="150" height="54" rx="8" class="box"/><text x="305" y="158" text-anchor="middle" class="lbl">softmax / T</text><text x="305" y="176" text-anchor="middle" class="sub">T = 2</text>
+      <rect x="230" y="20" width="150" height="54" rx="8" class="box"/><text x="305" y="44" text-anchor="middle" class="lbl">CE with gold</text><text x="305" y="62" text-anchor="middle" class="sub">hard label</text>
+      <rect x="450" y="134" width="150" height="54" rx="8" class="box"/><text x="525" y="158" text-anchor="middle" class="lbl">KL(teacher‖student)</text><text x="525" y="176" text-anchor="middle" class="sub">× T²</text>
+      <rect x="610" y="72" width="140" height="64" rx="8" class="box-s"/><text x="680" y="98" text-anchor="middle" class="lbl">loss</text><text x="680" y="118" text-anchor="middle" class="sub">α·CE + (1−α)·T²·KL</text>
+      <path d="M160 47 L228 47" class="arrow"/>
+      <path d="M160 161 L228 161" class="arrow-t"/>
+      <path d="M160 60 C200 60 200 120 228 150" class="arrow"/>
+      <path d="M380 161 L448 161" class="arrow"/>
+      <path d="M380 47 C520 47 560 80 608 96" class="arrow"/>
+      <path d="M600 161 C610 150 605 135 618 128" class="arrow"/>
+    </svg>
+  </div>
+  <div class="cols">
+    <div class="card"><span class="eyebrow">plain student</span><span class="big s">77.7</span><span class="cap">dev, mean of 5 seeds (± 2.1)</span></div>
+    <div class="card"><span class="eyebrow">distilled, α 0.5 · T 2</span><span class="big s">76.8</span><span class="cap">± 1.6 · paired t = −1.29 · McNemar p = 0.31</span></div>
+    <div class="card"><span class="eyebrow">what KD did improve</span><span class="big s">0.74</span><span class="cap">dev log-loss, down from 0.99; seed agreement 92% vs 88%</span></div>
+  </div>
+  <p class="take warn">Distillation made the student better calibrated and more stable, not more accurate. The difference in accuracy is not significant.</p>
+  <p><b>Why?</b> The teacher has a bias the student copies. It predicts <span class="t">entailment on 57.8%</span> of train against 50.2% gold, and 72% of its errors are on not-entailment pairs. The distilled student says entailment 61.5% of the time.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Follow-up distillation variants (sweep A)</th><th>Idea</th><th class="n">Dev acc</th><th class="n">Val acc</th></tr></thead>
+    <tbody>
+      <tr><td>Masked KD (α 0.5, T 2)</td><td>where the teacher is wrong, fall back to gold-only CE</td><td class="n pending">running</td><td class="n pending">running</td></tr>
+      <tr><td>Softer, label-heavy KD (α 0.8, T 4)</td><td>trust gold more, teacher only as a smooth prior</td><td class="n pending">running</td><td class="n pending">running</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 5 -->
+<section>
+  <div class="head"><div class="step">5 · WHERE THE PARAMETERS ARE</div><h2>70% of the small model is a lookup table</h2></div>
+  <div class="fig narrow">
+    <svg viewBox="0 0 760 170" role="img" aria-label="Parameter breakdown of DeBERTa-v3-xsmall: 49.2 million in the word embedding, 21.6 million in the transformer layers and head.">
+      <text x="10" y="24" class="lbl">DeBERTa-v3-xsmall · 70.8M parameters</text>
+      <rect x="10" y="40" width="511" height="44" rx="4" class="box-f"/>
+      <rect x="521" y="40" width="229" height="44" rx="4" class="box-s"/>
+      <text x="265" y="67" text-anchor="middle" class="lbl">word embedding · 128,100 × 384 = 49.2M</text>
+      <text x="635" y="67" text-anchor="middle" class="lbl">12 layers + head · 21.6M</text>
+      <text x="10" y="116" class="sub">RTE train + dev together use only ~19k of the 128k tokens.</text>
+      <text x="10" y="136" class="sub">Most of the parameter budget never sees a single RTE example.</text>
+    </svg>
+  </div>
+  <p>Two ways to shrink it, two very different outcomes:</p>
+  <div class="cols">
+    <div class="card"><span class="eyebrow">rank-128 factorised embedding</span><span class="big bad">51.0</span><span class="cap">38.1M params · dev ± 5.0 · near chance</span><p style="font-size:.92rem">SVD at rank 128 keeps only 57.5% of the embedding's energy. Training loss sat at 0.70 (chance) for 4–5 epochs on every seed: the network had to relearn language from 2.5k examples.</p></div>
+    <div class="card"><span class="eyebrow">vocabulary pruning</span><span class="big good">80.1</span><span class="cap">45.5M params · selected checkpoint (full: 80.9)</span><p style="font-size:.92rem">Keep only the rows that matter, unchanged. Applied after training, no retraining. Outputs are bit-identical on any input made of kept tokens.</p></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section>
+  <div class="head"><div class="step">6 · VOCABULARY PRUNING</div><h2>Keep the rows you will use, send the rest to [UNK]</h2></div>
+  <div class="fig">
+    <svg viewBox="0 0 960 220" role="img" aria-label="Vocabulary pruning: the 128,100-row embedding keeps train tokens and the top 60,000 frequent tokens, about 62,000 rows; other token ids are remapped to UNK through a lookup table.">
+      <text x="10" y="22" class="sub">embedding rows (original token ids, ordered by tokenizer frequency)</text>
+      <rect x="10" y="34" width="940" height="40" rx="4" class="box-f"/>
+      <rect x="10" y="34" width="440" height="40" rx="4" class="box-s"/>
+      <rect x="470" y="34" width="5" height="40" class="box-s"/><rect x="520" y="34" width="4" height="40" class="box-s"/><rect x="600" y="34" width="3" height="40" class="box-s"/><rect x="690" y="34" width="3" height="40" class="box-s"/><rect x="810" y="34" width="3" height="40" class="box-s"/><rect x="905" y="34" width="3" height="40" class="box-s"/>
+      <text x="230" y="59" text-anchor="middle" class="lbl">top 60,000 frequent tokens</text>
+      <text x="700" y="59" text-anchor="middle" class="sub">rare tail · kept only if seen in train</text>
+      <text x="10" y="96" class="sub ls">kept: 62,245 rows = specials ∪ every train token ∪ top-60k</text>
+      <text x="10" y="114" class="sub">dropped: 65,855 rows → their ids map to [UNK]</text>
+
+      <rect x="10" y="140" width="190" height="56" rx="8" class="box"/><text x="105" y="164" text-anchor="middle" class="lbl">tokenizer</text><text x="105" y="182" text-anchor="middle" class="sub">unchanged</text>
+      <rect x="260" y="140" width="220" height="56" rx="8" class="box-s"/><text x="370" y="164" text-anchor="middle" class="lbl">remap[id] lookup</text><text x="370" y="182" text-anchor="middle" class="sub">int32 table, not a parameter</text>
+      <rect x="540" y="140" width="190" height="56" rx="8" class="box-s"/><text x="635" y="164" text-anchor="middle" class="lbl">62k × 384 rows</text><text x="635" y="182" text-anchor="middle" class="sub">23.9M (was 49.2M)</text>
+      <rect x="790" y="140" width="160" height="56" rx="8" class="box"/><text x="870" y="164" text-anchor="middle" class="lbl">transformer</text><text x="870" y="182" text-anchor="middle" class="sub">untouched</text>
+      <path d="M200 168 L258 168" class="arrow"/><path d="M480 168 L538 168" class="arrow"/><path d="M730 168 L788 168" class="arrow"/>
+    </svg>
+    <p class="cap">How many frequent tokens to keep is decided on train only: half of train must have 98% of its tokens covered by the other half plus the top-N list. That rule picks N = 60,000. Dev is only used to draw the curve below.</p>
+  </div>
+  <div class="fig narrow">
+    <svg viewBox="0 0 920 350" role="img" aria-label="Dev accuracy of the pruned plain student against total parameters, rising from 75.5 percent at 28.7 million to 80.1 percent at 45.5 million and 80.9 percent unpruned at 70.8 million.">
+      <line x1="70" y1="300" x2="890" y2="300" class="axis"/><line x1="70" y1="30" x2="70" y2="300" class="axis"/>
+      <line x1="70" y1="232.5" x2="890" y2="232.5" class="grid"/><line x1="70" y1="165" x2="890" y2="165" class="grid"/><line x1="70" y1="97.5" x2="890" y2="97.5" class="grid"/><line x1="70" y1="30" x2="890" y2="30" class="grid"/>
+      <text x="60" y="304" text-anchor="end" class="tick">74</text><text x="60" y="236.5" text-anchor="end" class="tick">76</text><text x="60" y="169" text-anchor="end" class="tick">78</text><text x="60" y="101.5" text-anchor="end" class="tick">80</text><text x="60" y="34" text-anchor="end" class="tick">82</text>
+      <text x="152" y="320" text-anchor="middle" class="tick">30M</text><text x="316" y="320" text-anchor="middle" class="tick">40M</text><text x="480" y="320" text-anchor="middle" class="tick">50M</text><text x="644" y="320" text-anchor="middle" class="tick">60M</text><text x="808" y="320" text-anchor="middle" class="tick">70M</text>
+      <text x="480" y="342" text-anchor="middle" class="sub">total parameters</text>
+      <text x="16" y="165" text-anchor="middle" class="sub" transform="rotate(-90 16 165)">dev accuracy %</text>
+      <polyline class="lineplot" points="130.7,251 132.3,251 134,238.9 147.1,202.1 165.1,190 188.1,165.7 237.3,117.1 291.4,105 406.2,92.8 821.1,68.1"/>
+      <circle cx="130.7" cy="251" r="4.5" class="dot-s"/><circle cx="134" cy="238.9" r="3.5" class="dot-s"/><circle cx="147.1" cy="202.1" r="3.5" class="dot-s"/><circle cx="165.1" cy="190" r="3.5" class="dot-s"/><circle cx="188.1" cy="165.7" r="3.5" class="dot-s"/><circle cx="237.3" cy="117.1" r="3.5" class="dot-s"/><circle cx="291.4" cy="105" r="3.5" class="dot-s"/>
+      <circle cx="406.2" cy="92.8" r="7" class="hl"/><circle cx="821.1" cy="68.1" r="5" class="ring-s"/>
+      <text x="140" y="272" class="sub">train tokens only · 28.7M · 75.5</text>
+      <text x="418" y="84" class="sub lg">chosen: top-60k · 45.5M · 80.1</text>
+      <text x="812" y="56" text-anchor="end" class="sub">unpruned · 70.8M · 80.9</text>
+    </svg>
+    <p class="cap">Plain xsmall student, checkpoint picked by validation (seed 21). The tail of unseen tokens is mostly names (Hutchinson, Bakr, Nottinghamshire), so cutting harder costs real accuracy.</p>
+  </div>
+  <p class="take">−36% parameters for −0.7 points, decided without looking at dev.</p>
+</section>
+
+<!-- 7 -->
+<section>
+  <div class="head"><div class="step">7 · RESULTS</div><h2>Accuracy against size</h2></div>
+  <div class="fig narrow">
+    <svg viewBox="0 0 920 370" role="img" aria-label="Scatter of mean dev accuracy against total parameters for the teacher, DeBERTa-v3-small, the plain and distilled xsmall students and the rank-128 variant.">
+      <line x1="70" y1="330" x2="890" y2="330" class="axis"/><line x1="70" y1="30" x2="70" y2="330" class="axis"/>
+      <line x1="70" y1="296.7" x2="890" y2="296.7" class="grid"/><line x1="70" y1="230" x2="890" y2="230" class="grid"/><line x1="70" y1="163.3" x2="890" y2="163.3" class="grid"/><line x1="70" y1="96.7" x2="890" y2="96.7" class="grid"/><line x1="70" y1="30" x2="890" y2="30" class="grid"/>
+      <text x="60" y="300.7" text-anchor="end" class="tick">50</text><text x="60" y="234" text-anchor="end" class="tick">60</text><text x="60" y="167.3" text-anchor="end" class="tick">70</text><text x="60" y="100.7" text-anchor="end" class="tick">80</text><text x="60" y="34" text-anchor="end" class="tick">90</text>
+      <text x="70" y="350" text-anchor="middle" class="tick">0</text><text x="275" y="350" text-anchor="middle" class="tick">50M</text><text x="480" y="350" text-anchor="middle" class="tick">100M</text><text x="685" y="350" text-anchor="middle" class="tick">150M</text><text x="890" y="350" text-anchor="end" class="tick">200M</text>
+      <text x="16" y="180" text-anchor="middle" class="sub" transform="rotate(-90 16 180)">dev accuracy % (mean of 5 seeds)</text>
+      <line x1="70" y1="278.7" x2="890" y2="278.7" class="ref"/><text x="886" y="272" text-anchor="end" class="sub">majority class 52.7</text>
+      <circle cx="826" cy="64.7" r="7" class="dot-t"/><text x="814" y="54" text-anchor="end" class="sub lt">teacher · v3-base · 184.4M · 84.8</text>
+      <circle cx="651.8" cy="120" r="6" class="dot-m"/><text x="651.8" y="146" text-anchor="middle" class="sub">v3-small · 141.9M · 76.5</text>
+      <circle cx="360.3" cy="112" r="7" class="dot-s"/><text x="374" y="104" class="sub ls">plain xsmall · 70.8M · 77.7</text>
+      <circle cx="360.3" cy="118" r="6" class="ring-s"/><text x="374" y="132" class="sub">distilled xsmall · 76.8</text>
+      <circle cx="226.2" cy="290" r="6" class="dot-bad"/><text x="240" y="314" class="sub lb">rank-128 emb · 38.1M · 51.0</text>
+    </svg>
+    <p class="cap">Doubling the student (xsmall → small) bought nothing. The 7-point gap to the teacher is about pretraining depth and width, not raw parameter count; most of small's extra parameters are, again, embedding rows.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Model</th><th class="n">Total params</th><th class="n">Non-embedding</th><th class="n">Dev acc (5 seeds)</th><th class="n">Val acc</th></tr></thead>
+    <tbody>
+      <tr><td>Majority / word overlap / TF-IDF + LR</td><td class="n">—</td><td class="n">—</td><td class="n">52.7 / 57.4 / 57.0</td><td class="n">—</td></tr>
+      <tr><td><span class="t">Teacher</span>: DeBERTa-v3-base</td><td class="n">184.4M</td><td class="n">86.0M</td><td class="n">84.8 ± 1.1</td><td class="n">86.2</td></tr>
+      <tr><td>DeBERTa-v3-small</td><td class="n">141.9M</td><td class="n">43.5M</td><td class="n">76.5 ± 1.4</td><td class="n">75.1</td></tr>
+      <tr><td><span class="s">Plain student</span>: DeBERTa-v3-xsmall</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">77.7 ± 2.1</td><td class="n">78.5</td></tr>
+      <tr><td><span class="s">Distilled student</span> (α 0.5, T 2)</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">76.8 ± 1.6</td><td class="n">78.4</td></tr>
+      <tr><td>xsmall, rank-128 embedding</td><td class="n">38.1M</td><td class="n">21.6M</td><td class="n">51.0 ± 5.0</td><td class="n">57.6</td></tr>
+      <tr class="pick"><td><b>Submission</b>: selected xsmall checkpoint, vocab-pruned</td><td class="n">45.5M</td><td class="n">21.6M</td><td class="n">80.1 (single ckpt)</td><td class="n">81.0</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">The submission row is one checkpoint chosen by validation, so it reads higher than the 5-seed mean (77.7), which is the honest estimate of the method. Final pick is made after sweep A, by validation accuracy only.</p>
+</section>
+
+<!-- 8 -->
+<section>
+  <div class="head"><div class="step">8 · ERROR ANALYSIS</div><h2>The student says “entailment” too easily</h2></div>
+  <div class="fig narrow">
+    <svg viewBox="0 0 760 210" role="img" aria-label="Share of entailment predictions: gold 50.2 percent, teacher out-of-fold 57.8 percent, distilled student 61.5 percent.">
+      <text x="10" y="22" class="sub">share of pairs predicted “entailment”</text>
+      <text x="10" y="62" class="lbl">gold labels</text><rect x="190" y="46" width="276" height="24" rx="3" class="box-f"/><text x="476" y="63" class="sub">50.2%</text>
+      <text x="10" y="112" class="lbl lt">teacher (OOF, train)</text><rect x="190" y="96" width="318" height="24" rx="3" class="box-t"/><text x="518" y="113" class="sub lt">57.8%</text>
+      <text x="10" y="162" class="lbl ls">distilled student</text><rect x="190" y="146" width="338" height="24" rx="3" class="box-s"/><text x="538" y="163" class="sub ls">61.5%</text>
+      <line x1="190" y1="36" x2="190" y2="182" class="axis"/>
+      <line x1="465" y1="36" x2="465" y2="182" class="ref"/><text x="465" y="198" text-anchor="middle" class="tick">50%</text>
+    </svg>
+  </div>
+  <div class="cols">
+    <div class="card"><span class="eyebrow">lexical-overlap trap</span><span class="big bad">51%</span><span class="cap">student error when hypothesis words are ≥80% in the premise but the answer is no (teacher: 34.5%)</span></div>
+    <div class="card"><span class="eyebrow">not-entailment pairs</span><span class="big bad">33.9%</span><span class="cap">student error rate on gold not_entailment rows; most mistakes live here</span></div>
+    <div class="card"><span class="eyebrow">hard core</span><span class="big">21</span><span class="cap">dev pairs that teacher, plain and distilled student all get wrong</span></div>
+  </div>
+  <ul class="plain">
+    <li>Numbers and dates, and long premises, are weaker than average.</li>
+    <li>Hand-annotated sample of errors (world knowledge, quantifiers, paraphrase): <span class="pending">being finalised for the report</span>.</li>
+  </ul>
+</section>
+
+<!-- 9 -->
+<section>
+  <div class="head"><div class="step">9 · TAKEAWAYS</div><h2>What I would tell the next person</h2></div>
+  <ul class="plain">
+    <li><b>Count where the parameters live.</b> In small encoders the vocabulary dominates; pruning it is nearly free, factorising it is not.</li>
+    <li><b>A biased teacher passes on its bias.</b> KD improved calibration and seed stability but not accuracy, because the teacher over-predicts entailment.</li>
+    <li><b>Bigger is not automatically better on 2.5k examples.</b> v3-small (2× params) tied xsmall.</li>
+    <li><b>Report means over seeds and test significance.</b> A ±2-point seed spread is larger than most of the effects we chased.</li>
+    <li><b>Next with more compute:</b> intermediate-layer distillation, balancing the teacher's labels before distilling, and NLI-style data augmentation from the training pairs themselves.</li>
+  </ul>
+</section>
+
+<footer>
+  <span>Code, configs and every run's metrics: <a href="https://github.com/ihemanthm/rte-challenge" target="_blank" rel="noopener">github.com/ihemanthm/rte-challenge</a></span>
+  <span>Models: microsoft/deberta-v3-base, -small, -xsmall (pretrained only, no RTE/NLI fine-tuned checkpoints). Data: GLUE RTE.</span>
+</footer>
+
+</div>

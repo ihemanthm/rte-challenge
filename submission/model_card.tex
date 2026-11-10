@@ -1,0 +1,61 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,array,tabularx}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[hidelinks]{hyperref}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}\renewcommand{\arraystretch}{0.95}
+\begin{document}\sloppy
+{\Large\bfseries Model card: pruned DeBERTa-v3-xsmall for RTE}\\[2pt]
+{\small [Student name] $\cdot$ [Roll number] $\cdot$ CS6315E RTE Challenge \\ code: \url{https://github.com/ihemanthm/rte-challenge}}
+
+\textbf{Architecture.} \texttt{microsoft/deberta-v3-xsmall} encoder (12 layers, hidden 384, 6 heads) + pooler + linear 2-way head. Full fine-tuning; \textbf{no} LoRA/adapters, \textbf{no} distillation in the final model. After training, the input word-embedding is \emph{vocabulary-pruned}: only the rows for the 62,245 kept tokens (special tokens $\cup$ every training-set token $\cup$ the 60,000 most frequent tokens of the tokenizer's unigram model) are kept; any other token id maps to \texttt{[UNK]} through a fixed lookup table.
+
+\textbf{Parameter counts.}\\[2pt]
+\begin{tabularx}{\linewidth}{@{}Xr@{}}
+\toprule
+Total parameters & 45,542,402 \\
+Trainable parameters (all; full fine-tuning) & 45,542,402 \\
+\quad word embedding ($62{,}245 \times 384$) & 23,902,080 \\
+\quad transformer layers + position/LayerNorm + head & 21,640,322 \\
+Non-parameter lookup buffer (token-id remap, int32, 128,100 entries) & 0.5 MB \\
+Before pruning (same checkpoint) & 70,830,722 \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Training data.} RTE train (2,490 pairs; identical to GLUE RTE train), minus a 10\% validation split grouped by premise. No external NLI/RTE data, no pre-fine-tuned RTE checkpoints. Dev (GLUE RTE validation, 277) is used only for reporting.
+
+\textbf{Training hyperparameters.}\\[2pt]
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Optimiser & AdamW, weight decay 0.01 (none on bias/LayerNorm), grad-clip 1.0 \\
+Learning rate & $5\times10^{-5}$ top layer, layer-wise decay 0.9 per layer down; head $1\times10^{-4}$ \\
+Schedule & linear warm-up 10\%, then linear decay \\
+Batch size / max length & 16 / 256 tokens (premise truncated first) \\
+Epochs & up to 15, early stopping on validation accuracy, patience 4 \\
+Seeds & 13, 21, 42, 87, 100; submitted checkpoint = best validation (seed 21, epoch 7) \\
+Precision & fp32 weights; bf16 autocast on CUDA when supported, fp32 on MPS/CPU \\
+Pruning & post-hoc, no retraining; top-$N$ chosen on train only (98\% held-out token coverage) \\
+Hardware / software & Colab T4 GPU; PyTorch 2.14--2.15, Transformers 5.22.2 \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Results (GLUE RTE dev, 277).}\\[2pt]
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ & Params & Dev acc. \\
+\midrule
+Submitted model (pruned, seed 21) & 45.5M & 80.1 \\
+Same checkpoint before pruning & 70.8M & 80.9 \\
+Method estimate: xsmall, mean $\pm$ sd over 5 seeds & 70.8M & $77.7 \pm 2.1$ \\
+Our DeBERTa-v3-base baseline (5 seeds) & 184.4M & $84.8 \pm 1.1$ \\
+Instructor reference baseline & [TBD] & [TBD] \\
+\bottomrule
+\end{tabular}
+
+\textbf{Intended use and limits.} Binary entailment on short English news-style pairs. Text with tokens outside the kept vocabulary loses those tokens to \texttt{[UNK]} (98.5\% of dev tokens are kept; on the 60\% of dev pairs that are fully covered, outputs equal the unpruned model exactly). Known weaknesses: over-predicts entailment (57.4\% vs.\ 52.7\% gold), high-overlap non-entailments, modality/quantifiers, number binding.
+
+\textbf{Reproduce} (see README): \texttt{make venv data train submission}.
+\end{document}

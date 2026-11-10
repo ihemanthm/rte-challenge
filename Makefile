@@ -6,7 +6,7 @@ ZIP     ?= ../Dataset for Challenge-20261101.zip
 CONFIG  ?= configs/student_deberta_v3_xsmall.yaml
 RUN     ?=
 
-.PHONY: help venv lock data baselines train distill predict analyse test lint clean
+.PHONY: help venv lock data baselines train distill predict analyse prune submission figures test lint clean
 
 help:
 	@echo "make venv | lock | data | baselines | train CONFIG=... | distill CONFIG=... | predict RUN=... | analyse RUN=... | test | lint"
@@ -46,6 +46,18 @@ predict:
 
 analyse:
 	$(PY) -m rte.analysis --predictions $(RUN)/dev_predictions.jsonl
+
+# Submission = plain xsmall student (checkpoint chosen by validation) with a pruned vocabulary
+SUB_RUN ?= outputs/student_deberta_v3_xsmall
+
+prune:
+	$(PY) -m rte.prune --checkpoint $(SUB_RUN) --out $(SUB_RUN)_pruned
+
+submission: prune
+	$(PY) scripts/export_predictions.py --run $(SUB_RUN)_pruned
+
+figures:
+	$(PY) scripts/make_figures.py --pruned $(SUB_RUN)_pruned --out report
 
 test:
 	$(PY) -m pytest

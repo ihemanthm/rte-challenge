@@ -1,12 +1,31 @@
-# RTE Challenge: DeBERTa-v3 baseline and distilled student
+# RTE Challenge: a vocabulary-pruned DeBERTa-v3-xsmall
 
 Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 
 - **Baseline / teacher:** DeBERTa-v3-base, fine-tuned on Colab.
-- **Submission:** DeBERTa-v3-xsmall, trained with knowledge distillation from that teacher.
-- **Evaluation:** both models are scored on the GLUE RTE validation set (277 rows).
+- **Submission:** DeBERTa-v3-xsmall fine-tuned on RTE (checkpoint chosen by validation), then vocabulary-pruned to **45.5M** parameters.
+- **Also studied:** knowledge distillation from the teacher (out-of-fold soft labels), DeBERTa-v3-small, a factorised embedding.
+- **Evaluation:** GLUE RTE validation set (277 rows), used only for reporting.
 
-The aim is to keep most of the baseline's accuracy at a fraction of its parameter count.
+| Deliverable | File |
+|---|---|
+| Report (PDF) | [`report/report.pdf`](report/report.pdf) (source `report/report.tex`) |
+| Model card (1 page) | [`submission/model_card.pdf`](submission/model_card.pdf) |
+| Dev predictions | [`submission/dev_predictions.csv`](submission/dev_predictions.csv) (`idx, prediction, p_entailment`), same in `.jsonl` |
+| Hand-annotated errors | [`report/error_annotation.csv`](report/error_annotation.csv) |
+
+## Results (dev accuracy %, 5 seeds unless noted)
+
+| Model | Total params | Non-embedding | Dev acc | Val acc |
+|---|---|---|---|---|
+| DeBERTa-v3-base (baseline, teacher) | 184.4M | 86.0M | 84.8 ± 1.1 | 86.2 |
+| DeBERTa-v3-small | 141.9M | 43.5M | 76.5 ± 1.4 | 75.1 |
+| DeBERTa-v3-xsmall, plain fine-tuning | 70.8M | 21.6M | 77.7 ± 2.1 | 78.5 |
+| xsmall + KD (α 0.5, T 2) | 70.8M | 21.6M | 76.8 ± 1.6 | 78.4 |
+| xsmall, rank-128 factorised embedding | 38.1M | 21.6M | 51.0 ± 5.0 | 57.6 |
+| **Submission**: best-validation xsmall checkpoint (seed 21), vocab-pruned | **45.5M** | 21.6M | **80.1** (1 checkpoint) | 81.0 |
+
+Masked KD and KD (α 0.8, T 4) are pending (`notebooks/colab_sweep_a_distill.ipynb`).
 
 ## Environment
 
@@ -42,9 +61,16 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 
    Download `teacher_artifacts.zip` and unzip it in the project root.
    The student runs (steps 2–3) can also run on Colab via `notebooks/colab_student.ipynb`.
-2. **Student without distillation (ablation, local MPS):** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`
-3. **Distilled student (submission):** `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`
-4. **Predictions and error analysis:**
+2. **Plain student (the submission model):** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`
+3. **Distilled student (comparison):** `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`
+4. **Submission (prune the plain student's best-validation checkpoint, export predictions, figures):**
+   ```bash
+   make submission      # -> outputs/student_deberta_v3_xsmall_pruned/, submission/dev_predictions.{csv,jsonl}
+   make figures         # -> report/figures/acc_vs_params.pdf, report/results.json
+   make analyse RUN=outputs/student_deberta_v3_xsmall_pruned
+   cd report && tectonic report.tex   # report PDF; submission/model_card.tex likewise
+   ```
+5. **Predictions and error analysis for any run:**
    ```bash
    make predict RUN=outputs/distill_deberta_v3_xsmall
    make analyse RUN=outputs/distill_deberta_v3_xsmall
@@ -89,7 +115,10 @@ dev agreement with the full model and the params-vs-dev-accuracy curve over N.
 
 ```
 configs/    baseline_deberta_v3_base.yaml · student_deberta_v3_xsmall.yaml · distill_deberta_v3_xsmall.yaml
-scripts/    prepare_data.py
+scripts/    prepare_data.py · make_figures.py · export_predictions.py
+report/     report.tex/.pdf · figures/ · results.json · error_annotation.csv
+submission/ model_card.tex/.pdf · dev_predictions.csv/.jsonl
+docs/       seminar.html (talk walkthrough)
 src/rte/    data · config · device · seed · params · modeling · baselines · train · distill · predict · prune · analysis · recover
 notebooks/  colab_teacher.ipynb · colab_student.ipynb · colab_sweep_a_distill.ipynb · colab_sweep_b_size.ipynb
 artifacts/  teacher/teacher_logits_train.npy (OOF teacher soft labels, so distillation needs no teacher rerun)
