@@ -48,6 +48,13 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
    make analyse RUN=outputs/distill_deberta_v3_xsmall
    ```
 
+### Interrupted runs
+
+- **Resume:** each finished seed (`outputs/<run>/seeds/`) and OOF fold (`outputs/<run>_oof/folds/`) is saved as soon as it completes. Re-running the same command skips them. The Colab notebooks link `outputs/` to `MyDrive/rte-challenge/outputs`, so an expired runtime keeps everything.
+- **Recover metrics from a log:** if the outputs are gone but the cell output survives, paste the `rte.train` log into a file and run
+  `python -m rte.recover --config configs/baseline_deberta_v3_base.yaml --log teacher_log.txt`.
+  It rebuilds `metrics.json` (per-seed val/dev accuracy, history, parameter counts) and flags it `recovered_from_log`. Dev probabilities, checkpoints and teacher logits cannot be recovered from a log.
+
 ## Protocol (what keeps the numbers honest)
 
 - **Dev is never used for selection.** Each seed early-stops on a 10% hold-out of train, grouped by premise. 99 premises appear with several hypotheses, so random splits would leak.
@@ -61,9 +68,9 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 ```
 configs/    baseline_deberta_v3_base.yaml · student_deberta_v3_xsmall.yaml · distill_deberta_v3_xsmall.yaml
 scripts/    prepare_data.py
-src/rte/    data · config · device · seed · params · baselines · train · distill · predict · analysis
-notebooks/  colab_teacher.ipynb
-tests/      test_data.py
+src/rte/    data · config · device · seed · params · baselines · train · distill · predict · analysis · recover
+notebooks/  colab_teacher.ipynb · colab_student.ipynb
+tests/      test_data.py · test_recover.py
 ```
 
 ## Sanity baselines (dev)

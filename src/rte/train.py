@@ -187,22 +187,41 @@ def run(cfg: Config) -> dict:
         teacher = np.load(cfg.distill.teacher_logits)
         assert teacher.shape == (len(train_rows), 2), f"teacher logits {teacher.shape} misaligned"
 
-    seeds_info, dev_probs, best = [], [], None
+    # Each finished seed is written to seeds/ at once, so a re-run (e.g. after a Colab
+    # disconnect) skips it. The best-validation checkpoint is saved as soon as it appears.
+    seed_dir, model_dir = run_dir / "seeds", run_dir / "model"
+    seed_dir.mkdir(exist_ok=True)
+    seeds_info, dev_probs, best = [], [], None  # best = (info, dev probs)
     for seed in cfg.seeds:
-        model, info = fit(cfg, train_rows, tokenizer, device, seed, teacher=teacher)
-        logits = predict_logits(model, dev_dl, device)
-        info["dev_acc"] = float((logits.argmax(-1) == dev_y).mean())
-        print(f"seed {seed}: val {info['best_val_acc']:.4f} dev {info['dev_acc']:.4f}")
+        info_f, probs_f = seed_dir / f"seed_{seed}.json", seed_dir / f"seed_{seed}_dev_probs.npy"
+        if info_f.exists() and probs_f.exists():
+            info, probs = json.loads(info_f.read_text()), np.load(probs_f)
+            print(f"seed {seed}: resumed val {info['best_val_acc']:.4f} dev {info['dev_acc']:.4f}")
+        else:
+            model, info = fit(cfg, train_rows, tokenizer, device, seed, teacher=teacher)
+            logits = predict_logits(model, dev_dl, device)
+            info["dev_acc"] = float((logits.argmax(-1) == dev_y).mean())
+            probs = torch.softmax(torch.tensor(logits), -1).numpy()
+            print(f"seed {seed}: val {info['best_val_acc']:.4f} dev {info['dev_acc']:.4f}")
+            if cfg.save_model and _is_better(info, best):
+                model.save_pretrained(model_dir)
+                tokenizer.save_pretrained(model_dir)
+                (model_dir / "selected_seed.txt").write_text(str(seed))
+            np.save(probs_f, probs)  # marks the seed done, so written after the checkpoint
+            info_f.write_text(json.dumps(info, indent=2))
+            del model
+            if device.type == "mps":
+                torch.mps.empty_cache()
         seeds_info.append(info)
-        dev_probs.append(torch.softmax(torch.tensor(logits), -1).numpy())
+        dev_probs.append(probs)
         # keep the seed with the best *validation* accuracy (dev is not used for selection)
-        if best is None or info["best_val_acc"] > best[0]["best_val_acc"]:
-            best = (info, model.cpu(), dev_probs[-1])  # previous best is released here
-        del model
-        if device.type == "mps":
-            torch.mps.empty_cache()
+        if _is_better(info, best):
+            best = (info, probs)
 
-    params = count_params(best[1])
+    sel = model_dir / "selected_seed.txt"
+    if cfg.save_model and (not sel.exists() or sel.read_text() != str(best[0]["seed"])):
+        print(f"warning: {model_dir} does not hold selected seed {best[0]['seed']}")
+    params = count_params(load_model(cfg.model_name))  # same shapes as the fine-tuned model
     accs = np.array([s["dev_acc"] for s in seeds_info])
     metrics = {
         "run_name": cfg.run_name,
@@ -218,10 +237,7 @@ def run(cfg: Config) -> dict:
     (run_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     (run_dir / "params.json").write_text(json.dumps(params, indent=2))
     np.save(run_dir / "dev_probs_all_seeds.npy", np.stack(dev_probs))
-    write_dev_predictions(dev_rows, best[2], run_dir / "dev_predictions.jsonl")
-    if cfg.save_model:
-        best[1].save_pretrained(run_dir / "model")
-        tokenizer.save_pretrained(run_dir / "model")
+    write_dev_predictions(dev_rows, best[1], run_dir / "dev_predictions.jsonl")
 
     print(
         f"\n{cfg.run_name}: dev acc {metrics['dev_acc_mean']:.4f} ± {metrics['dev_acc_std']:.4f} "
@@ -229,6 +245,10 @@ def run(cfg: Config) -> dict:
         f"non-embedding {fmt(params['non_embedding'])}"
     )
     return metrics
+
+
+def _is_better(info: dict, best) -> bool:
+    return best is None or info["best_val_acc"] > best[0]["best_val_acc"]
 
 
 def write_dev_predictions(rows: list[dict], probs: np.ndarray, path) -> None:
@@ -247,7 +267,14 @@ def run_oof(cfg: Config) -> np.ndarray:
     rows = load_jsonl(cfg.train_file)
     oof = np.zeros((len(rows), 2), dtype=np.float32)
     seed = cfg.seeds[0]
+    fold_dir = run_dir / "folds"  # one file per finished fold, so a re-run resumes
+    fold_dir.mkdir(exist_ok=True)
     for k, (tr_idx, ho_idx) in enumerate(grouped_kfold(rows, cfg.oof_folds)):
+        fold_f = fold_dir / f"fold_{k}.npy"
+        if fold_f.exists():
+            oof[ho_idx] = np.load(fold_f)
+            print(f"fold {k + 1}/{cfg.oof_folds}: resumed from {fold_f}")
+            continue
         print(f"fold {k + 1}/{cfg.oof_folds}: train {len(tr_idx)} held-out {len(ho_idx)}")
         model, _ = fit(cfg, [rows[i] for i in tr_idx], tokenizer, device, seed + k)
         ho_dl = make_loader(
@@ -257,6 +284,7 @@ def run_oof(cfg: Config) -> np.ndarray:
             shuffle=False,
         )
         oof[ho_idx] = predict_logits(model, ho_dl, device)
+        np.save(fold_f, oof[ho_idx])
         del model
     acc = float((oof.argmax(-1) == labels_of(rows)).mean())
     np.save(run_dir / "teacher_logits_train.npy", oof)
