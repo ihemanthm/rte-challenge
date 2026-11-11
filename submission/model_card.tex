@@ -9,7 +9,7 @@
 \setlength{\parskip}{3pt}\renewcommand{\arraystretch}{0.95}
 \begin{document}\sloppy
 {\Large\bfseries Model card: distilled, pruned DeBERTa-v3-xsmall for RTE}\\[2pt]
-{\small [Student name] $\cdot$ [Roll number] $\cdot$ CS6315E RTE Challenge \\ code: \url{https://github.com/ihemanthm/rte-challenge}}
+{\small [Student name] $\cdot$ [Roll number] $\cdot$ CS6315E RTE Challenge \\ code: submitted alongside (see the README)}
 
 \textbf{Architecture.} \texttt{microsoft/deberta-v3-xsmall} encoder (12 layers, hidden 384, 6 heads) + pooler + linear 2-way head. Full fine-tuning with knowledge distillation from a DeBERTa-v3-base teacher (masked KD, below); \textbf{no} LoRA/adapters. After training, the input word-embedding is \emph{vocabulary-pruned}: only the rows for the 62,245 kept tokens (special tokens $\cup$ every training-set token $\cup$ the 60,000 most frequent tokens of the tokenizer's unigram model) are kept; any other token id maps to \texttt{[UNK]} through a fixed lookup table.
 
