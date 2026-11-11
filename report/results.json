@@ -49,6 +49,30 @@
       "selected_dev": 77.6173285198556
     },
     {
+      "run": "distill_masked_deberta_v3_xsmall",
+      "label": "xsmall + masked KD",
+      "role": "student",
+      "params": 70830722,
+      "non_emb": 21640322,
+      "dev_mean": 78.26714801444044,
+      "dev_std": 1.3841364269083605,
+      "val_mean": 79.2149003650074,
+      "selected_seed": 21,
+      "selected_dev": 77.9783393501805
+    },
+    {
+      "run": "distill_a08_t4_deberta_v3_xsmall",
+      "label": "xsmall + KD a0.8 T4",
+      "role": "student",
+      "params": 70830722,
+      "non_emb": 21640322,
+      "dev_mean": 77.32851985559567,
+      "dev_std": 0.7826528299162016,
+      "val_mean": 79.52592698886785,
+      "selected_seed": 100,
+      "selected_dev": 76.53429602888086
+    },
+    {
       "run": "student_deberta_v3_xsmall_emb128",
       "label": "xsmall, rank-128 emb",
       "role": "failed",
@@ -64,9 +88,9 @@
   "pruned": {
     "top_n": 60000,
     "kept_rows": 62245,
-    "dev_acc_full": 0.8086642599277978,
-    "dev_acc_pruned": 0.8014440433212996,
-    "dev_prediction_agreement": 0.9638989169675091,
+    "dev_acc_full": 0.779783393501805,
+    "dev_acc_pruned": 0.7833935018050542,
+    "dev_prediction_agreement": 0.9675090252707581,
     "dev_coverage": {
       "token_coverage": 0.9852900817827542,
       "rows_fully_covered": 0.5992779783393501

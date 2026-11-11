@@ -20,9 +20,10 @@ def main() -> None:
     )
     p.add_argument("--epochs", type=int)
     p.add_argument("--seeds", type=int, nargs="+")
+    p.add_argument("--run-name", dest="run_name", help="write to outputs/<run-name>")
     args = p.parse_args()
 
-    cfg = Config.load(args.config, epochs=args.epochs, seeds=args.seeds)
+    cfg = Config.load(args.config, epochs=args.epochs, seeds=args.seeds, run_name=args.run_name)
     if cfg.distill is None:
         raise SystemExit("config has no `distill:` block")
     if args.teacher_logits:

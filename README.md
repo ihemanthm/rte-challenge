@@ -1,10 +1,10 @@
-# RTE Challenge: a vocabulary-pruned DeBERTa-v3-xsmall
+# RTE Challenge: a distilled, vocabulary-pruned DeBERTa-v3-xsmall
 
 Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 
 - **Baseline / teacher:** DeBERTa-v3-base, fine-tuned on Colab.
-- **Submission:** DeBERTa-v3-xsmall fine-tuned on RTE (checkpoint chosen by validation), then vocabulary-pruned to **45.5M** parameters.
-- **Also studied:** knowledge distillation from the teacher (out-of-fold soft labels), DeBERTa-v3-small, a factorised embedding.
+- **Submission:** DeBERTa-v3-xsmall distilled from the teacher with *masked* KD (seed 21, the highest validation accuracy of all 20 xsmall runs), then vocabulary-pruned to **45.5M** parameters. Dev accuracy **78.3**.
+- **Also studied:** plain fine-tuning, plain KD and KD with α 0.8 / T 4 (out-of-fold soft labels), DeBERTa-v3-small, a factorised embedding.
 - **Evaluation:** GLUE RTE validation set (277 rows), used only for reporting.
 
 | Deliverable | File |
@@ -22,10 +22,13 @@ Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 | DeBERTa-v3-small | 141.9M | 43.5M | 76.5 ± 1.4 | 75.1 |
 | DeBERTa-v3-xsmall, plain fine-tuning | 70.8M | 21.6M | 77.7 ± 2.1 | 78.5 |
 | xsmall + KD (α 0.5, T 2) | 70.8M | 21.6M | 76.8 ± 1.6 | 78.4 |
+| xsmall + masked KD (α 0.5, T 2) | 70.8M | 21.6M | 78.3 ± 1.4 | 79.2 |
+| xsmall + KD (α 0.8, T 4) | 70.8M | 21.6M | 77.3 ± 0.8 | 79.5 |
 | xsmall, rank-128 factorised embedding | 38.1M | 21.6M | 51.0 ± 5.0 | 57.6 |
-| **Submission**: best-validation xsmall checkpoint (seed 21), vocab-pruned | **45.5M** | 21.6M | **80.1** (1 checkpoint) | 81.0 |
+| **Submission**: masked KD, seed 21, vocab-pruned | **45.5M** | 21.6M | **78.3** (1 checkpoint) | 82.7 |
+| same checkpoint before pruning | 70.8M | 21.6M | 78.0 (1 checkpoint) | 82.7 |
 
-Masked KD and KD (α 0.8, T 4) are pending (`notebooks/colab_sweep_a_distill.ipynb`).
+The submission is the best-validation checkpoint of all 20 xsmall runs (4 methods × 5 seeds); dev was never used to choose. Masked KD removes the entailment bias that plain KD copies from the teacher, but its gain over plain fine-tuning is within seed noise (paired t, p = 0.57 on dev).
 
 ## Environment
 
@@ -61,13 +64,15 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 
    Download `teacher_artifacts.zip` and unzip it in the project root.
    The student runs (steps 2–3) can also run on Colab via `notebooks/colab_student.ipynb`.
-2. **Plain student (the submission model):** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`
-3. **Distilled student (comparison):** `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`
-4. **Submission (prune the plain student's best-validation checkpoint, export predictions, figures):**
+2. **Distilled student (the submission model):** `make train-submission` (= `make distill CONFIG=configs/distill_masked_deberta_v3_xsmall.yaml`)
+   (5 seeds; the best-validation seed, 21, is saved to `outputs/distill_masked_deberta_v3_xsmall/model`).
+   Train it on a CUDA GPU: Colab reruns are bit-identical, an Apple-MPS rerun of seed 21 was not (dev 74.7).
+3. **Comparisons:** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`, `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`, `make distill CONFIG=configs/distill_a08_t4_deberta_v3_xsmall.yaml`
+4. **Submission (prune the selected checkpoint, export predictions, figures):**
    ```bash
-   make submission      # -> outputs/student_deberta_v3_xsmall_pruned/, submission/dev_predictions.{csv,jsonl}
+   make submission      # -> outputs/distill_masked_deberta_v3_xsmall_pruned/, submission/dev_predictions.{csv,jsonl}
    make figures         # -> report/figures/acc_vs_params.pdf, report/results.json
-   make analyse RUN=outputs/student_deberta_v3_xsmall_pruned
+   make analyse RUN=outputs/distill_masked_deberta_v3_xsmall_pruned
    cd report && tectonic report.tex   # report PDF; submission/model_card.tex likewise
    ```
 5. **Predictions and error analysis for any run:**
@@ -81,7 +86,9 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 `notebooks/colab_sweep_a_distill.ipynb` (masked KD; alpha 0.8 / T 4) and `notebooks/colab_sweep_b_size.ipynb`
 (xsmall with a rank-128 factorised embedding, ~38M params; DeBERTa-v3-small) need no uploads or Drive: Runtime → Run all.
 Each run's outputs download as a zip when it finishes.
-Result: the rank-128 embedding collapses (dev 51.0, near chance: it discards too much of the
+Sweep A result: see the table above (masked KD best on dev and on mean validation
+with α 0.5; α 0.8 / T 4 has the lowest seed spread).
+Sweep B result: the rank-128 embedding collapses (dev 51.0, near chance: it discards too much of the
 pretrained embedding), and DeBERTa-v3-small (141.9M) is no better than xsmall (76.5 vs 77.7).
 
 ### Vocabulary pruning (post-hoc, no retraining)

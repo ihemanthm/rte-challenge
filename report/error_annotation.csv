@@ -1,26 +1,26 @@
 idx,gold,p_entailment,category,note
 16,not_entailment,1.00,overlap_unsupported,"""a substance found in red wine"" generalised to ""red wine"""
+34,entailment,0.07,paraphrase,"""will spread out over a year"" = ""lasts a year"""
 38,not_entailment,1.00,modality_quantifier,"""nearly 4 percent"" read as exactly 4 percent"
-66,entailment,0.00,world_knowledge,needs the inference that the greenhouse effect changes temperature hence climate
-68,entailment,0.03,paraphrase,"""pricing controls"" = government wants to keep drug prices down"
-90,entailment,0.01,paraphrase,appositive ""The President of Colombia Alvaro Uribe"" inside a long premise
-102,entailment,0.08,paraphrase,"""heap leach mining"" -> industry uses heap leaching"
-121,not_entailment,0.98,world_knowledge,hypothesis is true in the world (Laura Bush) but not stated; model uses outside knowledge
-124,not_entailment,0.78,overlap_unsupported,argument swap: Doha is in Qatar vs Qatar is in Doha
-128,entailment,0.00,world_knowledge,a country's president lives in that country
-129,entailment,0.00,world_knowledge,asked to form a government -> new prime minister
-135,entailment,0.09,questionable_gold,"""towers up from the center of the earth"" -> ""is in the center"" is a doubtful entailment"
-136,not_entailment,1.00,overlap_unsupported,"written and signed in Philadelphia -> document ""is located"" there"
-139,not_entailment,0.99,modality_quantifier,"""only those whose parents can afford"" vs ""all parents"""
-166,not_entailment,0.99,overlap_unsupported,confirmed foreign participation -> the general himself took part (role confusion)
+41,not_entailment,1.00,overlap_unsupported,released the plan on behalf of the Secretary; Dean is not the Secretary (role binding)
+68,entailment,0.01,paraphrase,"""pricing controls"" = government wants to keep drug prices down"
+79,entailment,0.10,paraphrase,numbers slumped from poaching until the ivory ban = endangered by poachers
+90,entailment,0.02,paraphrase,"appositive """"The President of Colombia Alvaro Uribe"""" inside a long premise"
+98,entailment,0.01,questionable_gold,"premise is the Massachusetts court, hypothesis says U.S. Supreme Court"
+121,not_entailment,0.94,world_knowledge,hypothesis is true in the world (Laura Bush) but not stated; model uses outside knowledge
+127,not_entailment,0.96,overlap_unsupported,premise lists only costs of legalization; topic overlap read as support
+129,entailment,0.02,world_knowledge,asked to form a government -> new prime minister
+131,entailment,0.39,near_threshold,p=0.39; Dead Sea as the lowest point is stated in an appositive
+144,not_entailment,0.99,number_binding,"80% belongs to Mrs. Bush, not Mr. Bush"
+146,entailment,0.10,number_binding,"12,000 years ago implies humans existed 10,000 years ago (numeric comparison)"
+147,not_entailment,1.00,overlap_unsupported,album order is never stated
+161,entailment,0.01,world_knowledge,lower crime with capital punishment read as deterrence (causal inference)
 167,not_entailment,1.00,number_binding,32 populations read as 32 pandas
 174,entailment,0.00,paraphrase,"BSE ""the so-called mad cow disease"" -> abbreviation expansion"
-185,entailment,0.11,world_knowledge,Renault (and Ford's European arm) -> European cars
-194,not_entailment,0.99,overlap_unsupported,court location attributed to the accused's origin
-195,entailment,0.00,paraphrase,long premise; NYT column -> works for the New York Times
 207,not_entailment,1.00,number_binding,age 86 belongs to Bea Arthur not Angela Lansbury
-233,not_entailment,0.87,modality_quantifier,"""asked the government to investigate"" vs ""investigates"""
-242,not_entailment,0.99,modality_quantifier,"""ready to be used commercially"" vs ""is commercially used"""
-248,not_entailment,0.98,overlap_unsupported,"""capsule of an earlier NASA era"" -> specific ""Apollo-style"" and ""shuttle rocket parts"""
-255,entailment,0.43,near_threshold,disbands after final concert -> holds final concert; just below 0.5
-273,entailment,0.42,near_threshold,tense/paraphrase (sold -> buys); just below 0.5
+227,entailment,0.01,number_binding,"EUR 72.090.405,19 > 72 million (number format and comparison)"
+228,not_entailment,0.99,overlap_unsupported,60 million barrels is not in the premise
+239,not_entailment,1.00,overlap_unsupported,Storch denies the album; co-mention read as collaboration
+242,not_entailment,0.55,modality_quantifier,"""ready to be used commercially"" vs ""is commercially used"""
+245,not_entailment,0.93,overlap_unsupported,a count at one time does not say the number increases
+250,not_entailment,0.87,modality_quantifier,"first American woman to attempt Everest, not succeed solo"

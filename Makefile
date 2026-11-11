@@ -6,7 +6,7 @@ ZIP     ?= ../Dataset for Challenge-20261101.zip
 CONFIG  ?= configs/student_deberta_v3_xsmall.yaml
 RUN     ?=
 
-.PHONY: help venv lock data baselines train distill predict analyse prune submission figures test lint clean
+.PHONY: help venv lock data baselines train distill predict analyse train-submission prune submission figures test lint clean
 
 help:
 	@echo "make venv | lock | data | baselines | train CONFIG=... | distill CONFIG=... | predict RUN=... | analyse RUN=... | test | lint"
@@ -47,8 +47,11 @@ predict:
 analyse:
 	$(PY) -m rte.analysis --predictions $(RUN)/dev_predictions.jsonl
 
-# Submission = plain xsmall student (checkpoint chosen by validation) with a pruned vocabulary
-SUB_RUN ?= outputs/student_deberta_v3_xsmall
+# Submission = masked-KD xsmall student (best-validation seed, 21) with a pruned vocabulary
+SUB_RUN ?= outputs/distill_masked_deberta_v3_xsmall
+
+train-submission:
+	$(PY) -m rte.distill --config configs/distill_masked_deberta_v3_xsmall.yaml
 
 prune:
 	$(PY) -m rte.prune --checkpoint $(SUB_RUN) --out $(SUB_RUN)_pruned

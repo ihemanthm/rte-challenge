@@ -23,6 +23,15 @@ RUNS = [  # run dir, short label, role
     ("distill_a08_t4_deberta_v3_xsmall", "xsmall + KD a0.8 T4", "student"),
     ("student_deberta_v3_xsmall_emb128", "xsmall, rank-128 emb", "failed"),
 ]
+# the four xsmall variants share one x position: stack their labels to the right with leader lines
+OFFSETS = {
+    "student_deberta_v3_xsmall": (18, 28),
+    "distill_masked_deberta_v3_xsmall": (18, 18),
+    "distill_a08_t4_deberta_v3_xsmall": (18, 8),
+    "distill_deberta_v3_xsmall": (18, -2),
+    "student_deberta_v3_small": (6, -14),
+}
+LEADER = {"arrowstyle": "-", "lw": 0.4, "color": "grey"}
 COLORS = {"teacher": "#a86400", "student": "#3a47c9", "other": "#596173", "failed": "#b73b26"}
 
 
@@ -74,12 +83,16 @@ def main() -> None:
             color=COLORS[r["role"]],
             capsize=2,
         )
+        dx, dy = OFFSETS.get(r["run"], (5, 4))
         a.annotate(
             r["label"],
             (r["params"] / 1e6, r["dev_mean"]),
             textcoords="offset points",
-            xytext=(5, -9 if "KD" in r["label"] else 4),
+            xytext=(dx, dy),
             fontsize=7,
+            arrowprops={"arrowstyle": "-", "lw": 0.4, "color": "grey"}
+            if r["run"] in OFFSETS
+            else None,
         )
     a.scatter(
         [prune["params"]["total"] / 1e6],
@@ -93,7 +106,7 @@ def main() -> None:
         "submission (pruned,\nsingle ckpt)",
         (prune["params"]["total"] / 1e6, prune["dev_acc_pruned"] * 100),
         textcoords="offset points",
-        xytext=(-20, 8),
+        xytext=(-38, -30),
         fontsize=7,
         color="#1d7f55",
     )
@@ -102,6 +115,7 @@ def main() -> None:
     a.set_xlabel("total parameters (M)")
     a.set_ylabel("dev accuracy % (mean ± sd, 5 seeds)")
     a.set_xlim(0, 215)
+    a.set_ylim(44, 93)
     a.set_title("(a) accuracy vs. size", fontsize=9)
 
     c = prune["curve_over_top_n"]
@@ -122,7 +136,7 @@ def main() -> None:
     )
     b.set_xlabel("total parameters (M)")
     b.set_ylabel("dev accuracy % (selected ckpt)")
-    b.set_title("(b) vocabulary pruning (plain xsmall)", fontsize=9)
+    b.set_title("(b) vocabulary pruning (submitted ckpt)", fontsize=9)
     fig.tight_layout()
     fig.savefig(out / "figures" / "acc_vs_params.pdf")
     fig.savefig(out / "figures" / "acc_vs_params.png", dpi=200)
