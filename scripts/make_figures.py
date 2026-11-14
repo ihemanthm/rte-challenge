@@ -64,6 +64,7 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--outputs", default="outputs")
     p.add_argument("--pruned", required=True, help="run dir written by rte.prune")
+    p.add_argument("--selection", default="report/model_selection.json")
     p.add_argument("--out", default="report")
     args = p.parse_args()
     out = Path(args.out)
@@ -103,7 +104,7 @@ def main() -> None:
         zorder=3,
     )
     a.annotate(
-        "submission (pruned,\nsingle ckpt)",
+        "B (pruned,\nsingle ckpt)",
         (prune["params"]["total"] / 1e6, prune["dev_acc_pruned"] * 100),
         textcoords="offset points",
         xytext=(-38, -30),
@@ -118,25 +119,47 @@ def main() -> None:
     a.set_ylim(44, 93)
     a.set_title("(a) accuracy vs. size", fontsize=9)
 
-    c = prune["curve_over_top_n"]
-    b.plot(
-        [x["total_params"] / 1e6 for x in c],
-        [x["dev_acc"] * 100 for x in c],
-        "o-",
-        color="#3a47c9",
-        ms=3,
-    )
-    b.scatter(
-        [prune["params"]["total"] / 1e6],
-        [prune["dev_acc_pruned"] * 100],
-        marker="*",
-        s=110,
-        color="#1d7f55",
-        zorder=3,
-    )
+    # (b) validation-only selection evidence written by scripts/select_models.py
+    sel = json.loads(Path(args.selection).read_text())
+    styles = {
+        "masked KD, seed 21": "#3a47c9",
+        "plain, seed 21": "#596173",
+        "plain KD, seed 100": "#a8aebd",
+    }
+    for s in sel:
+        c = s["curve"]
+        b.plot(
+            [x["total_params"] / 1e6 for x in c],
+            [x["val_acc"] * 100 for x in c],
+            "o-",
+            ms=2.5,
+            lw=1.2,
+            color=styles.get(s["label"], "grey"),
+            label=s["label"],
+        )
+    picks = {  # submitted models: (label in sel, params) -> marker text
+        "A": ("masked KD, seed 21", 70_830_722),
+        "B": ("masked KD, seed 21", 45_542_402),
+        "C": ("plain, seed 21", 70_830_722),
+    }
+    for name, (lab, n) in picks.items():
+        curve = next(s["curve"] for s in sel if s["label"] == lab)
+        pt = min(curve, key=lambda x: abs(x["total_params"] - n))  # nearest vocabulary size
+        x = pt["total_params"] / 1e6
+        b.scatter([x], [pt["val_acc"] * 100], marker="*", s=110, color="#1d7f55", zorder=3)
+        b.annotate(
+            name,
+            (x, pt["val_acc"] * 100),
+            textcoords="offset points",
+            xytext=(-12 if name == "A" else 5, 2 if name != "C" else -10),
+            fontsize=8,
+            color="#1d7f55",
+            weight="bold",
+        )
+    b.legend(fontsize=6.5, frameon=False, loc="lower right")
     b.set_xlabel("total parameters (M)")
-    b.set_ylabel("dev accuracy % (selected ckpt)")
-    b.set_title("(b) vocabulary pruning (submitted ckpt)", fontsize=9)
+    b.set_ylabel("validation accuracy % (own seed)")
+    b.set_title("(b) vocabulary size, validation only", fontsize=9)
     fig.tight_layout()
     fig.savefig(out / "figures" / "acc_vs_params.pdf")
     fig.savefig(out / "figures" / "acc_vs_params.png", dpi=200)

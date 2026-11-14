@@ -36,7 +36,6 @@
 Model & Total params & Non-emb. & Dev acc.\ (5 seeds) & Val acc. \\
 \midrule
 Majority / word overlap / TF-IDF + LR & -- & -- & 52.7 / 57.4 / 57.0 & -- \\
-\textbf{Instructor reference baseline} & [TBD] & [TBD] & [TBD] & -- \\
 DeBERTa-v3-base (my baseline, teacher) & 184.4M & 86.0M & $84.8 \pm 1.1$ & 86.2 \\
 DeBERTa-v3-small & 141.9M & 43.5M & $76.5 \pm 1.4$ & 75.1 \\
 DeBERTa-v3-xsmall, plain fine-tuning & 70.8M & 21.6M & $77.7 \pm 2.1$ & 78.5 \\
@@ -45,46 +44,48 @@ DeBERTa-v3-xsmall, plain fine-tuning & 70.8M & 21.6M & $77.7 \pm 2.1$ & 78.5 \\
 \quad + KD ($\alpha$ 0.8, $T$ 4) & 70.8M & 21.6M & $77.3 \pm 0.8$ & 79.5 \\
 \quad rank-128 factorised embedding & 38.1M & 21.6M & $51.0 \pm 5.0$ & 57.6 \\
 \midrule
-\textbf{Submission}: masked KD, seed 21, vocab-pruned & \textbf{45.5M} & 21.6M & \textbf{78.3} (1 ckpt) & 82.7 \\
-\quad same checkpoint before pruning & 70.8M & 21.6M & 78.0 (1 ckpt) & 82.7 \\
+\multicolumn{5}{@{}l}{\emph{Submitted (one checkpoint each, all DeBERTa-v3-xsmall):}} \\
+\textbf{A}: masked KD, seed 21 & 70.8M & 21.6M & 78.0 & \textbf{82.7} \\
+\textbf{B}: A, vocabulary-pruned & \textbf{45.5M} & 21.6M & 78.3 & 79.8$^\dagger$ \\
+\textbf{C}: plain fine-tuning, seed 21 & 70.8M & 21.6M & 80.9 & 81.0 \\
 \bottomrule
 \end{tabularx}
-\caption{GLUE RTE dev accuracy (\%). ``Val'' (mean best validation accuracy) is the only number used for selection. The submission is the highest-validation checkpoint of all 20 xsmall runs (4 methods $\times$ 5 seeds); dev played no part, and the 5-seed mean (78.3) is the fairer estimate of the method. (The best plain checkpoint, val 81.0, happens to score 80.9 on dev; picking it would have meant selecting on dev.)}
+\caption{GLUE RTE dev accuracy (\%). ``Val'' (premise-grouped validation split of train; mean of best epoch over seeds, or the checkpoint's own seed) is the only number used to choose anything. $^\dagger$Validation with only the tokens of the rows the model was fit on, so the text is unseen (Sec.~\ref{sec:select}).}
 \label{tab:results}
 \end{table}
 
-The submission has \textbf{4.0$\times$ fewer parameters} than DeBERTa-v3-base (45.5M vs.\ 184.4M) and 2.1$\times$ fewer non-embedding parameters than v3-small. Against my v3-base baseline it is 7.2 points lower on dev for the selected checkpoints (85.6 vs.\ 78.3; McNemar $p{=}0.012$, 39 vs.\ 19 discordant pairs) and 6.5 points lower on 5-seed means. Pruning flipped 9 of 277 dev predictions (5 now right, 4 now wrong; $p{=}1.0$). A Colab rerun of seed 21 reproduced the checkpoint bit for bit; an Apple-MPS rerun did not (dev 74.7).
+Model B has \textbf{4.0$\times$ fewer parameters} than DeBERTa-v3-base (45.5M vs.\ 184.4M) and is 7.2 points lower on dev (85.6 vs.\ 78.3 for the selected checkpoints; McNemar $p{=}0.012$). A Colab rerun of seed 21 reproduced checkpoint A bit for bit; an Apple-MPS rerun did not (dev 74.7).
 
 \textbf{Plain distillation copies the teacher's bias; masking it out helps a little.} KD at $\alpha{=}0.5$ scored $-0.9$ points versus plain fine-tuning (paired $t$ over seeds, $p{=}0.27$). It improved calibration (dev log-loss 0.74 vs.\ 0.99) and seed agreement (92\% vs.\ 88\%), but the teacher is biased: on train it predicts \emph{entailment} for 57.8\% of pairs against 50.2\% gold, and 72\% of its OOF errors are on not-entailment pairs. The KD student inherits it (61.5\% entailment predictions on dev vs.\ 52.7\% gold). Masked KD removes the inherited bias (55.8\%, same as plain) and is the best method on both dev ($+0.6$) and validation ($+0.7$), but neither gain is significant over 5 seeds ($p{=}0.57$, $0.21$). $\alpha{=}0.8$, $T{=}4$ has the best mean validation (79.5) and the lowest seed spread ($\pm0.8$) but not better dev.
 
-\section{Accuracy vs.\ parameters}
+\section{Accuracy vs.\ parameters: choosing three models}\label{sec:select}
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.94\linewidth]{figures/acc_vs_params.pdf}\vspace{-0.6em}
-\caption{(a) Dev accuracy (mean $\pm$ sd over 5 seeds) against total parameters; the star is the pruned submission (single checkpoint). (b) Pruning curve for the submitted checkpoint: train tokens plus the top-$N$ frequent tokens, $N \in \{0,\dots,60\text{k}, \text{all}\}$.}
+\caption{(a) Dev accuracy (mean $\pm$ sd over 5 seeds) against total parameters; the star is model B. (b) Validation accuracy of three checkpoints as the vocabulary shrinks (fit-split tokens + top-$N$ frequent, $N \in \{0,\dots,60\text{k},\text{all}\}$); stars are the submitted models.}
 \label{fig:params}
 \end{figure}
 
-\textbf{Larger is not automatically better here} (Fig.~\ref{fig:params}a). v3-small has twice xsmall's parameters and twice its non-embedding parameters, but scored lower on both validation (75.1 vs.\ 78.5) and dev (76.5 vs.\ 77.7). The large jump is to v3-base (+7 points), which is wider (768 vs.\ 384 hidden) \emph{and} deeper than small, so on this data the benefit comes from pretraining capacity per layer rather than raw parameter count.
+\textbf{Is a bigger model worth it?} Not within reach of xsmall (Fig.~\ref{fig:params}a): v3-small doubles every parameter count yet scored lower on validation (75.1 vs.\ 78.5) and dev. v3-base buys +7 points for 2.6$\times$ the parameters but is a different (wider, deeper) architecture, and the three submissions must share one; xsmall gives the best accuracy per parameter. Factorising its embedding (rank-128 SVD, 38.1M) destroyed it: training loss stayed at chance and dev fell to 51.0.
 
-\textbf{Where parameters can be cut matters more than how many.} Shrinking the embedding by SVD at rank 128 kept only 57.5\% of its energy; training loss stayed at chance (0.70) for 4--5 epochs on every seed and the model never recovered (51.0\%). Pruning the vocabulary instead removes rows that never fire, so the remaining model is unchanged: $-36\%$ parameters at no measurable cost ($+0.4$ points here, $-0.7$ on the plain seed-21 checkpoint). Fig.~\ref{fig:params}b shows a smaller version would do worse: keeping only training tokens (28.7M) costs 4.0 points, because unseen dev tokens are mostly rare names, and only 98.5\% of dev tokens (60\% of pairs) are fully covered even at $N{=}60$k.
+\textbf{Decision rule (validation only).} \textbf{A}: the highest-validation checkpoint of all 20 xsmall runs (masked KD, seed 21; 82.7). \textbf{B}: A with the pruned vocabulary, the one place where parameters clearly are not paying (36\% of them). Measuring that honestly needs care: the kept set contains every train token, validation rows included, so I re-score each checkpoint's validation split keeping only the tokens of the rows it was \emph{fit} on (Fig.~\ref{fig:params}b). The full vocabulary is best for all three checkpoints, by 2--3 points; with $n{\approx}248$ the standard error is $\pm2.5$ points, and on dev pruning moved accuracy by $+0.4$ and $-0.7$. So B trades $-36\%$ parameters for an estimated 0--3 points, and $N{=}60$k stays the train-only choice: picking the 38M peak would fit noise of one or two pairs. Keeping only training tokens (28.7M) costs 4 points on dev. \textbf{C}: the best checkpoint trained \emph{without} the teacher (plain, seed 21; 81.0), a hedge with different errors (it disagrees with A on 18 dev pairs; the best of A/B/C per pair would reach 84.1\%). If accuracy alone counts, A is my pick; per parameter, B.
 
 \section{Error analysis}
-The submission makes 60 errors on dev. 34 are false \emph{entailment} predictions (error rate 26.0\% on gold not-entailment vs.\ 17.8\% on entailment); it still predicts entailment slightly too often (55.6\% vs.\ 52.7\% gold). Automatic tags, error rate on each subset (overall 21.7\%): high lexical overlap ($\geq$80\%) but not entailed 36.8\% ($n{=}38$); low overlap ($<$50\%) but entailed 42.9\% (14); numbers/dates in the hypothesis 31.2\% (48); negation in exactly one side 22.5\% (40); top-10\% long premises 21.4\% (28). Negation and length are \emph{not} major error sources here.
+Model B makes 60 errors on dev. 34 are false \emph{entailment} predictions (error rate 26.0\% on gold not-entailment vs.\ 17.8\% on entailment); it still predicts entailment slightly too often (55.6\% vs.\ 52.7\% gold). Automatic tags, error rate on each subset (overall 21.7\%): high lexical overlap ($\geq$80\%) but not entailed 36.8\% ($n{=}38$); low overlap ($<$50\%) but entailed 42.9\% (14); numbers/dates in the hypothesis 31.2\% (48); negation in exactly one side 22.5\% (40); top-10\% long premises 21.4\% (28). Negation and length are \emph{not} major error sources here.
 
 I hand-labelled a random sample of 25 errors (seed 0; \texttt{report/error\_annotation.csv}):
 \begin{itemize}
 \item \textbf{Overlap, unsupported claim (7, all false entailments).} The hypothesis reuses premise words but changes a role or adds a detail: Mr Dean released a plan ``on behalf of the Secretary'' $\to$ ``Mr Dean is the Secretary''; ``a substance found in red wine'' $\to$ ``red wine''; an added ``60 million barrels''. This is the lexical-overlap heuristic known from NLI models~\cite{mccoy2019right}.
-\item \textbf{Paraphrase missed (5, false non-entailments).} ``will spread out over a year'' $\to$ ``lasts a year''; ``BSE, the so-called mad cow disease''; an appositive inside a long premise.
+\item \textbf{Paraphrase missed (5, false non-entailments).} ``will spread out over a year'' $\to$ ``lasts a year''; ``BSE, the so-called mad cow disease''.
 \item \textbf{Numbers (5).} Binding: 80\% approval belongs to Mrs.\ not Mr.\ Bush; 32 \emph{populations} read as 32 pandas. Comparison: \euro72.090.405,19 $>$ ``more than 72 million''; 12,000 years ago $\Rightarrow$ humans existed 10,000 years ago.
 \item \textbf{Modality and world knowledge (6).} ``nearly 4 percent'' $\to$ ``4 percent''; ``attempt'' Everest $\to$ ``succeeds''; asked to form a government $\Rightarrow$ prime minister; once the model used outside knowledge the premise does not state (Bush's wife is Laura).
 \item \textbf{Other (2):} one near the threshold ($p{=}0.39$), one doubtful gold label (a state court read as the U.S.\ Supreme Court).
 \end{itemize}
 
 \section{Reflection}
-Counting \emph{where} the parameters are paid off most: post-hoc vocabulary pruning is cheap, exact on covered text, and gave the largest efficiency gain. Logit distillation helped only once the teacher's wrong labels were masked, and then within seed noise; factorising the embedding and a bigger student did not help. \textbf{With more time/compute:} (i) prune the vocabulary \emph{before} fine-tuning and use the saved budget for a wider backbone; (ii) intermediate-layer or attention distillation instead of logits only, with the teacher's entailment bias corrected (class re-weighting or temperature per class); (iii) train-only data augmentation targeting the error classes above (role swaps, modality and quantifier edits of training hypotheses as not-entailment); (iv) more seeds to tighten the $\pm2$-point seed spread, larger than most effects here.
+Counting \emph{where} the parameters are paid off most: vocabulary pruning is cheap and exact on covered text, though not free on unseen text. Distillation helped only once the teacher's wrong labels were masked, and then within seed noise; a factorised embedding and a bigger student did not help. \textbf{With more time/compute:} (i) prune the vocabulary \emph{before} fine-tuning and use the saved budget for a wider backbone; (ii) intermediate-layer or attention distillation instead of logits only, with the teacher's entailment bias corrected (class re-weighting or temperature per class); (iii) train-only data augmentation targeting the error classes above (role swaps, modality and quantifier edits of training hypotheses as not-entailment); (iv) more seeds to tighten the $\pm2$-point seed spread, larger than most effects here.
 
-\textbf{Reproducibility.} Pinned \texttt{uv} env; each run stores config, versions, parameter counts, per-seed results; Colab reruns are bit-identical. \texttt{make train-submission submission} rebuilds it.
+\textbf{Reproducibility.} Pinned \texttt{uv} env; each run stores config, versions, parameter counts, per-seed results; Colab reruns are bit-identical. \texttt{make train-submission submission} rebuilds A and B; \texttt{scripts/predict\_test.py} runs all three.
 
 \small
 \begin{thebibliography}{9}\setlength{\itemsep}{0pt}

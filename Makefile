@@ -6,7 +6,7 @@ ZIP     ?= ../Dataset for Challenge-20261101.zip
 CONFIG  ?= configs/student_deberta_v3_xsmall.yaml
 RUN     ?=
 
-.PHONY: help venv lock data baselines train distill predict analyse train-submission prune submission figures test lint clean
+.PHONY: help venv lock data baselines train distill predict analyse train-submission prune submission test-predict figures test lint clean
 
 help:
 	@echo "make venv | lock | data | baselines | train CONFIG=... | distill CONFIG=... | predict RUN=... | analyse RUN=... | test | lint"
@@ -57,7 +57,13 @@ prune:
 	$(PY) -m rte.prune --checkpoint $(SUB_RUN) --out $(SUB_RUN)_pruned
 
 submission: prune
-	$(PY) scripts/export_predictions.py --run $(SUB_RUN)_pruned
+	$(PY) scripts/package_models.py
+	$(PY) scripts/predict_test.py --input data/dev.jsonl --out submission/dev_predictions --device cpu
+
+# test-day inference with every model in models/: make test-predict TEST=path/to/test.jsonl
+TEST ?=
+test-predict:
+	$(PY) scripts/predict_test.py --input $(TEST)
 
 figures:
 	$(PY) scripts/make_figures.py --pruned $(SUB_RUN)_pruned --out report

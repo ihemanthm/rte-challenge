@@ -1,0 +1,183 @@
+[
+  {
+    "label": "masked KD, seed 21",
+    "checkpoint": "outputs/distill_masked_deberta_v3_xsmall_pruned/model",
+    "seed": 21,
+    "curve": [
+      {
+        "top_n": 0,
+        "total_params": 28316546,
+        "val_acc": 0.7903225806451613
+      },
+      {
+        "top_n": 2000,
+        "total_params": 28438274,
+        "val_acc": 0.7903225806451613
+      },
+      {
+        "top_n": 5000,
+        "total_params": 28626434,
+        "val_acc": 0.7903225806451613
+      },
+      {
+        "top_n": 10000,
+        "total_params": 29426690,
+        "val_acc": 0.7943548387096774
+      },
+      {
+        "top_n": 15000,
+        "total_params": 30593282,
+        "val_acc": 0.8024193548387096
+      },
+      {
+        "top_n": 20000,
+        "total_params": 31987202,
+        "val_acc": 0.8024193548387096
+      },
+      {
+        "top_n": 30000,
+        "total_params": 35064962,
+        "val_acc": 0.8024193548387096
+      },
+      {
+        "top_n": 40000,
+        "total_params": 38425730,
+        "val_acc": 0.8104838709677419
+      },
+      {
+        "top_n": 60000,
+        "total_params": 45478658,
+        "val_acc": 0.7983870967741935
+      },
+      {
+        "top_n": 128000,
+        "total_params": 70830722,
+        "val_acc": 0.8266129032258065
+      }
+    ]
+  },
+  {
+    "label": "plain, seed 21",
+    "checkpoint": "outputs/student_deberta_v3_xsmall/model",
+    "seed": 21,
+    "curve": [
+      {
+        "top_n": 0,
+        "total_params": 28316546,
+        "val_acc": 0.7903225806451613
+      },
+      {
+        "top_n": 2000,
+        "total_params": 28438274,
+        "val_acc": 0.7862903225806451
+      },
+      {
+        "top_n": 5000,
+        "total_params": 28626434,
+        "val_acc": 0.782258064516129
+      },
+      {
+        "top_n": 10000,
+        "total_params": 29426690,
+        "val_acc": 0.7943548387096774
+      },
+      {
+        "top_n": 15000,
+        "total_params": 30593282,
+        "val_acc": 0.8024193548387096
+      },
+      {
+        "top_n": 20000,
+        "total_params": 31987202,
+        "val_acc": 0.8024193548387096
+      },
+      {
+        "top_n": 30000,
+        "total_params": 35064962,
+        "val_acc": 0.7983870967741935
+      },
+      {
+        "top_n": 40000,
+        "total_params": 38425730,
+        "val_acc": 0.7903225806451613
+      },
+      {
+        "top_n": 60000,
+        "total_params": 45478658,
+        "val_acc": 0.7782258064516129
+      },
+      {
+        "top_n": 128000,
+        "total_params": 70792706,
+        "val_acc": 0.8104838709677419
+      },
+      {
+        "top_n": 128000,
+        "total_params": 70830722,
+        "val_acc": 0.8104838709677419
+      }
+    ]
+  },
+  {
+    "label": "plain KD, seed 100",
+    "checkpoint": "outputs/distill_deberta_v3_xsmall/model",
+    "seed": 100,
+    "curve": [
+      {
+        "top_n": 0,
+        "total_params": 28270850,
+        "val_acc": 0.78
+      },
+      {
+        "top_n": 2000,
+        "total_params": 28391810,
+        "val_acc": 0.78
+      },
+      {
+        "top_n": 5000,
+        "total_params": 28581506,
+        "val_acc": 0.776
+      },
+      {
+        "top_n": 10000,
+        "total_params": 29380994,
+        "val_acc": 0.788
+      },
+      {
+        "top_n": 15000,
+        "total_params": 30560642,
+        "val_acc": 0.784
+      },
+      {
+        "top_n": 20000,
+        "total_params": 31954178,
+        "val_acc": 0.78
+      },
+      {
+        "top_n": 30000,
+        "total_params": 35039234,
+        "val_acc": 0.776
+      },
+      {
+        "top_n": 40000,
+        "total_params": 38405378,
+        "val_acc": 0.788
+      },
+      {
+        "top_n": 60000,
+        "total_params": 45468290,
+        "val_acc": 0.788
+      },
+      {
+        "top_n": 128000,
+        "total_params": 70792706,
+        "val_acc": 0.816
+      },
+      {
+        "top_n": 128000,
+        "total_params": 70830722,
+        "val_acc": 0.816
+      }
+    ]
+  }
+]

@@ -337,10 +337,12 @@ a:focus-visible { outline: 2px solid var(--student); outline-offset: 2px; }
       <tr><td><span class="s">Masked KD</span> (α 0.5, T 2)</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">78.3 ± 1.4</td><td class="n">79.2</td></tr>
       <tr><td>KD (α 0.8, T 4)</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">77.3 ± 0.8</td><td class="n">79.5</td></tr>
       <tr><td>xsmall, rank-128 embedding</td><td class="n">38.1M</td><td class="n">21.6M</td><td class="n">51.0 ± 5.0</td><td class="n">57.6</td></tr>
-      <tr class="pick"><td><b>Submission</b>: masked KD seed 21, vocab-pruned</td><td class="n">45.5M</td><td class="n">21.6M</td><td class="n">78.3 (single ckpt)</td><td class="n">82.7</td></tr>
+      <tr class="pick"><td><b>A</b>: masked KD, seed 21</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">78.0 (single ckpt)</td><td class="n">82.7</td></tr>
+      <tr class="pick"><td><b>B</b>: A, vocab-pruned</td><td class="n">45.5M</td><td class="n">21.6M</td><td class="n">78.3 (single ckpt)</td><td class="n">79.8*</td></tr>
+      <tr class="pick"><td><b>C</b>: plain fine-tuning, seed 21</td><td class="n">70.8M</td><td class="n">21.6M</td><td class="n">80.9 (single ckpt)</td><td class="n">81.0</td></tr>
     </tbody>
   </table></div>
-  <p class="cap">The submission is the highest-validation checkpoint of all 20 xsmall runs (4 methods × 5 seeds). Dev played no part. The best plain checkpoint happens to score 80.9 on dev, but choosing it would have meant selecting on dev. 4× fewer parameters than the teacher, 7.2 points lower (McNemar p = 0.012).</p>
+  <p class="cap">Three submissions, one architecture (DeBERTa-v3-xsmall), chosen on validation only. <b>A</b>: highest validation of all 20 xsmall runs. <b>B</b>: A with the vocabulary pruned, −36% parameters for an estimated 0–3 points (*validation re-scored with only the tokens of the rows the model was fit on, so the text is unseen). <b>C</b>: best checkpoint trained without the teacher, a hedge with different errors (disagrees with A on 18 dev pairs). Bigger models are not worth it: v3-small is worse, and v3-base is a different architecture. Accuracy first: A; per parameter: B.</p>
 </section>
 
 <!-- 8 -->

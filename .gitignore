@@ -15,3 +15,7 @@ outputs/
 
 # small, reproducible teacher soft labels (see artifacts/teacher/README.md)
 !artifacts/teacher/*.npy
+
+# trained models for submission (shared separately, ~0.7 GB)
+models/
+predictions/

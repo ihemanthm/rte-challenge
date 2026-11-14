@@ -1,9 +1,12 @@
-# RTE Challenge: a distilled, vocabulary-pruned DeBERTa-v3-xsmall
+# RTE Challenge: three DeBERTa-v3-xsmall models (distilled, pruned, plain)
 
 Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 
 - **Baseline / teacher:** DeBERTa-v3-base, fine-tuned on Colab.
-- **Submission:** DeBERTa-v3-xsmall distilled from the teacher with *masked* KD (seed 21, the highest validation accuracy of all 20 xsmall runs), then vocabulary-pruned to **45.5M** parameters. Dev accuracy **78.3**.
+- **Submission: three models, one architecture (DeBERTa-v3-xsmall):**
+  - **A** masked KD from the teacher, seed 21: 70.8M, val 82.7 (highest of all 20 xsmall runs), dev 78.0
+  - **B** model A with a pruned vocabulary: **45.5M**, val 79.8, dev 78.3
+  - **C** plain fine-tuning, seed 21: 70.8M, val 81.0, dev 80.9
 - **Also studied:** plain fine-tuning, plain KD and KD with α 0.8 / T 4 (out-of-fold soft labels), DeBERTa-v3-small, a factorised embedding.
 - **Evaluation:** GLUE RTE validation set (277 rows), used only for reporting.
 
@@ -11,7 +14,8 @@ Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 |---|---|
 | Report (PDF) | [`report/report.pdf`](report/report.pdf) (source `report/report.tex`) |
 | Model card (1 page) | [`submission/model_card.pdf`](submission/model_card.pdf) |
-| Dev predictions | [`submission/dev_predictions.csv`](submission/dev_predictions.csv) (`idx, prediction, p_entailment`), same in `.jsonl` |
+| Dev predictions, one file per model | [`submission/dev_predictions/`](submission/dev_predictions/) (`idx, prediction, label_id, p_entailment`), same in `.jsonl` |
+| Validation evidence for the model choice | [`report/model_selection.json`](report/model_selection.json) (from `scripts/select_models.py`) |
 | Hand-annotated errors | [`report/error_annotation.csv`](report/error_annotation.csv) |
 | Executed Colab notebooks (all cell outputs: training logs, per-seed results) | [`notebooks/executed/`](notebooks/executed/README.md) |
 
@@ -26,10 +30,22 @@ Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 | xsmall + masked KD (α 0.5, T 2) | 70.8M | 21.6M | 78.3 ± 1.4 | 79.2 |
 | xsmall + KD (α 0.8, T 4) | 70.8M | 21.6M | 77.3 ± 0.8 | 79.5 |
 | xsmall, rank-128 factorised embedding | 38.1M | 21.6M | 51.0 ± 5.0 | 57.6 |
-| **Submission**: masked KD, seed 21, vocab-pruned | **45.5M** | 21.6M | **78.3** (1 checkpoint) | 82.7 |
-| same checkpoint before pruning | 70.8M | 21.6M | 78.0 (1 checkpoint) | 82.7 |
+| **A**: masked KD, seed 21 | 70.8M | 21.6M | 78.0 (1 checkpoint) | **82.7** |
+| **B**: A, vocabulary-pruned | **45.5M** | 21.6M | 78.3 (1 checkpoint) | 79.8 (unseen-vocab val) |
+| **C**: plain fine-tuning, seed 21 | 70.8M | 21.6M | 80.9 (1 checkpoint) | 81.0 |
 
-The submission is the best-validation checkpoint of all 20 xsmall runs (4 methods × 5 seeds); dev was never used to choose. Masked KD removes the entailment bias that plain KD copies from the teacher, but its gain over plain fine-tuning is within seed noise (paired t, p = 0.57 on dev).
+Choice, on validation only: A is the best checkpoint of all 20 xsmall runs (4 methods × 5 seeds). B shrinks A where parameters are not paying (the vocabulary, 36% of parameters), at an estimated 0–3 points. C is the best checkpoint trained without the teacher, a hedge with different errors. Masked KD removes the entailment bias that plain KD copies from the teacher, but its gain over plain fine-tuning is within seed noise (paired t, p = 0.57 on dev).
+
+## Test-day inference (all three models, offline)
+
+```bash
+python scripts/package_models.py            # once: copies the three checkpoints into models/
+python scripts/predict_test.py --input test.jsonl
+```
+Reads `.jsonl`, `.json`, `.csv` or `.tsv` (columns `premise`/`hypothesis` or `sentence1`/`sentence2`;
+`idx`/`id` and `label` optional). Writes `predictions/<model>_predictions.csv` (`idx, prediction,
+label_id, p_entailment`; `label_id` 0 = entailment, 1 = not_entailment) and `.jsonl` for each model in
+`models/`. Runs on CPU in seconds for a few hundred pairs; no network access is needed.
 
 ## Environment
 
@@ -71,7 +87,7 @@ make baselines   # majority / word-overlap / TF-IDF+LR sanity baselines
 3. **Comparisons:** `make train CONFIG=configs/student_deberta_v3_xsmall.yaml`, `make distill CONFIG=configs/distill_deberta_v3_xsmall.yaml`, `make distill CONFIG=configs/distill_a08_t4_deberta_v3_xsmall.yaml`
 4. **Submission (prune the selected checkpoint, export predictions, figures):**
    ```bash
-   make submission      # -> outputs/distill_masked_deberta_v3_xsmall_pruned/, submission/dev_predictions.{csv,jsonl}
+   make submission      # -> model B in outputs/..._pruned/, models/{A,B,C}, submission/dev_predictions/
    make figures         # -> report/figures/acc_vs_params.pdf, report/results.json
    make analyse RUN=outputs/distill_masked_deberta_v3_xsmall_pruned
    cd report && tectonic report.tex   # report PDF; submission/model_card.tex likewise
@@ -125,7 +141,8 @@ dev agreement with the full model and the params-vs-dev-accuracy curve over N.
 configs/    baseline_deberta_v3_base.yaml · student_deberta_v3_xsmall.yaml · distill_deberta_v3_xsmall.yaml
 scripts/    prepare_data.py · make_figures.py · export_predictions.py
 report/     report.tex/.pdf · figures/ · results.json · error_annotation.csv
-submission/ model_card.tex/.pdf · dev_predictions.csv/.jsonl
+submission/ model_card.tex/.pdf · dev_predictions/ (one file per model)
+models/ the three submitted models (gitignored; scripts/package_models.py)
 docs/       seminar.html (talk walkthrough)
 src/rte/    data · config · device · seed · params · modeling · baselines · train · distill · predict · prune · analysis · recover
 notebooks/  colab_teacher.ipynb · colab_student.ipynb · colab_sweep_a_distill.ipynb · colab_sweep_b_size.ipynb

@@ -8,55 +8,42 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{3pt}\renewcommand{\arraystretch}{0.95}
 \begin{document}\sloppy
-{\Large\bfseries Model card: distilled, pruned DeBERTa-v3-xsmall for RTE}\\[2pt]
+{\Large\bfseries Model card: three DeBERTa-v3-xsmall models for RTE}\\[2pt]
 {\small [Student name] $\cdot$ [Roll number] $\cdot$ CS6315E RTE Challenge \\ code: submitted alongside (see the README)}
 
-\textbf{Architecture.} \texttt{microsoft/deberta-v3-xsmall} encoder (12 layers, hidden 384, 6 heads) + pooler + linear 2-way head. Full fine-tuning with knowledge distillation from a DeBERTa-v3-base teacher (masked KD, below); \textbf{no} LoRA/adapters. After training, the input word-embedding is \emph{vocabulary-pruned}: only the rows for the 62,245 kept tokens (special tokens $\cup$ every training-set token $\cup$ the 60,000 most frequent tokens of the tokenizer's unigram model) are kept; any other token id maps to \texttt{[UNK]} through a fixed lookup table.
+\textbf{Architecture (shared by all three).} \texttt{microsoft/deberta-v3-xsmall} encoder (12 layers, hidden 384, 6 heads) + pooler + linear 2-way head; full fine-tuning, \textbf{no} LoRA/adapters. Model B additionally has a \emph{vocabulary-pruned} input embedding: only the rows of 62,245 tokens are kept (special tokens $\cup$ every training-set token $\cup$ the 60,000 most frequent tokens of the tokenizer's unigram model); other token ids map to \texttt{[UNK]} through a fixed lookup table (int32, 0.5 MB, not a parameter).
 
-\textbf{Parameter counts.}\\[2pt]
-\begin{tabularx}{\linewidth}{@{}Xr@{}}
+\textbf{The three models.}\\[2pt]
+\begin{tabularx}{\linewidth}{@{}lXrrr@{}}
 \toprule
-Total parameters & 45,542,402 \\
-Trainable parameters (all; full fine-tuning) & 45,542,402 \\
-\quad word embedding ($62{,}245 \times 384$) & 23,902,080 \\
-\quad transformer layers + position/LayerNorm + head & 21,640,322 \\
-Token-id remap buffer (int32, 128,100 entries; not a parameter) & 0.5 MB \\
-Before pruning (same checkpoint) & 70,830,722 \\
+ & Training & Params & Val & Dev \\
+\midrule
+A & masked KD from DeBERTa-v3-base, seed 21 (epoch 7) & 70,830,722 & 82.7 & 78.0 \\
+B & model A, vocabulary pruned after training & 45,542,402 & 79.8 & 78.3 \\
+C & plain fine-tuning on gold labels, seed 21 & 70,830,722 & 81.0 & 80.9 \\
 \bottomrule
-\end{tabularx}
+\end{tabularx}\\[2pt]
+{\small All three: 21,640,322 non-embedding parameters; word embedding $128{,}100\times384 = 49{,}190{,}400$ (A, C) or $62{,}245\times384 = 23{,}902{,}080$ (B). All parameters trainable. Val: premise-grouped 10\% split of train (B: with only the fit split's tokens, so the text is unseen).}
 
-\textbf{Training data.} RTE train (2,490 pairs; identical to GLUE RTE train), minus a 10\% validation split grouped by premise. Teacher soft labels are out-of-fold logits of five DeBERTa-v3-base models trained on the same train set. No external NLI/RTE data, no pre-fine-tuned RTE checkpoints. Dev (GLUE RTE validation, 277) is used only for reporting.
+\textbf{Why these three.} A has the highest validation accuracy of all 20 xsmall checkpoints (4 methods $\times$ 5 seeds). B removes the 36\% of parameters that sit in embedding rows RTE rarely uses, at an estimated 0--3 points. C is the best checkpoint trained without the teacher, so its errors differ from A's. Accuracy first: A; accuracy per parameter: B.
+
+\textbf{Training data.} RTE train (2,490 pairs; identical to GLUE RTE train), minus the validation split. Teacher soft labels (A, B) are out-of-fold logits of five DeBERTa-v3-base models trained on the same data. No external NLI/RTE data, no LLM-generated data, no pre-fine-tuned RTE checkpoints. Dev (GLUE RTE validation, 277) is used only for reporting.
 
 \textbf{Training hyperparameters.}\\[2pt]
 \begin{tabularx}{\linewidth}{@{}lX@{}}
 \toprule
-Loss & $0.5\,\mathrm{CE} + 0.5\,T^2\,\mathrm{KL}$, $T{=}2$; pure CE where the teacher is wrong \\
-Optimiser & AdamW, weight decay 0.01 (none on bias/LayerNorm), grad-clip 1.0 \\
-Learning rate & $5\times10^{-5}$ top layer, layer-wise decay 0.9 per layer down; head $1\times10^{-4}$ \\
-Schedule & linear warm-up 10\%, then linear decay \\
-Batch size / max length & 16 / 256 tokens (premise truncated first) \\
+Loss & A, B: $0.5\,\mathrm{CE} + 0.5\,T^2\,\mathrm{KL}$, $T{=}2$, pure CE where the teacher is wrong; C: CE \\
+Optimiser & AdamW, weight decay 0.01, grad-clip 1.0 \\
+Learning rate & $5\times10^{-5}$ top layer, layer-wise decay 0.9; head $1\times10^{-4}$ \\
+Schedule / batch / length & 10\% linear warm-up then decay / 16 / 256 tokens \\
 Epochs & up to 15, early stopping on validation accuracy, patience 4 \\
-Seeds & 13, 21, 42, 87, 100; submitted = best val.\ of 20 runs (seed 21, epoch 7) \\
-Precision & fp32 weights; bf16 autocast on CUDA, fp32 elsewhere \\
-Pruning & post-hoc; top-$N$ chosen on train only (98\% coverage) \\
-Hardware / software & Colab T4 GPU (reruns bit-identical); PyTorch 2.14, Transformers 5.22.2 \\
+Precision / hardware & bf16 autocast on Colab T4 (reruns bit-identical); PyTorch 2.14, Transformers 5.22.2 \\
 \bottomrule
 \end{tabularx}
 
-\textbf{Results (GLUE RTE dev, 277).}\\[2pt]
-\begin{tabular}{@{}lrr@{}}
-\toprule
- & Params & Dev acc. \\
-\midrule
-Submitted model (masked KD, seed 21, pruned) & 45.5M & 78.3 \\
-Same checkpoint before pruning & 70.8M & 78.0 \\
-Method estimate: masked KD, mean $\pm$ sd over 5 seeds & 70.8M & $78.3 \pm 1.4$ \\
-DeBERTa-v3-base baseline / teacher (5 seeds) & 184.4M & $84.8 \pm 1.1$ \\
-Instructor reference baseline & [TBD] & [TBD] \\
-\bottomrule
-\end{tabular}
+\textbf{Reference.} DeBERTa-v3-base (teacher), 184.4M parameters: dev $84.8 \pm 1.1$ over 5 seeds.
 
-\textbf{Intended use and limits.} Binary entailment on short English news-style pairs. Text with tokens outside the kept vocabulary loses those tokens to \texttt{[UNK]} (98.5\% of dev tokens are kept; on the 60\% of dev pairs that are fully covered, outputs equal the unpruned model exactly). Weak on high-overlap non-entailments (36.8\% error), numbers (31.2\%), modality.
+\textbf{Limits.} Short English news-style pairs. Weak on high-overlap non-entailments, numbers and modality. B loses tokens outside its vocabulary to \texttt{[UNK]} (98.5\% of dev tokens kept).
 
-\textbf{Reproduce}: see README (\texttt{make train-submission submission}).
+\textbf{Run.} \texttt{python scripts/predict\_test.py --input <test file>} runs all three (README).
 \end{document}
