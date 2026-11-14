@@ -13,6 +13,7 @@ Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 | Model card (1 page) | [`submission/model_card.pdf`](submission/model_card.pdf) |
 | Dev predictions | [`submission/dev_predictions.csv`](submission/dev_predictions.csv) (`idx, prediction, p_entailment`), same in `.jsonl` |
 | Hand-annotated errors | [`report/error_annotation.csv`](report/error_annotation.csv) |
+| Executed Colab notebooks (all cell outputs: training logs, per-seed results) | [`notebooks/executed/`](notebooks/executed/README.md) |
 
 ## Results (dev accuracy %, 5 seeds unless noted)
 
