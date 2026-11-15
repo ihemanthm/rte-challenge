@@ -16,6 +16,7 @@ Binary textual entailment (`entailment` / `not_entailment`) on RTE.
 | Model card (1 page) | [`submission/model_card.pdf`](submission/model_card.pdf) |
 | Dev predictions, one file per model | [`submission/dev_predictions/`](submission/dev_predictions/) (`idx, prediction, label_id, p_entailment`), same in `.jsonl` |
 | Validation evidence for the model choice | [`report/model_selection.json`](report/model_selection.json) (from `scripts/select_models.py`) |
+| Accuracy on the mentor's `val.jsonl` (= GLUE RTE validation, our dev set) | [`report/mentor_val/`](report/mentor_val/) and [`report/figures/mentor_val.pdf`](report/figures/mentor_val.pdf): A 78.0, B 78.7, C 81.2 (`scripts/plot_val_results.py`) |
 | Hand-annotated errors | [`report/error_annotation.csv`](report/error_annotation.csv) |
 | Executed Colab notebooks (all cell outputs: training logs, per-seed results) | [`notebooks/executed/`](notebooks/executed/README.md) |
 

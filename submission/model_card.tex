@@ -9,7 +9,7 @@
 \setlength{\parskip}{3pt}\renewcommand{\arraystretch}{0.95}
 \begin{document}\sloppy
 {\Large\bfseries Model card: three DeBERTa-v3-xsmall models for RTE}\\[2pt]
-{\small [Student name] $\cdot$ [Roll number] $\cdot$ CS6315E RTE Challenge \\ code: submitted alongside (see the README)}
+{\small Harshini G $\cdot$ M260356CS $\cdot$ CS6315E RTE Challenge \\ code: submitted alongside (see the README)}
 
 \textbf{Architecture (shared by all three).} \texttt{microsoft/deberta-v3-xsmall} encoder (12 layers, hidden 384, 6 heads) + pooler + linear 2-way head; full fine-tuning, \textbf{no} LoRA/adapters. Model B additionally has a \emph{vocabulary-pruned} input embedding: only the rows of 62,245 tokens are kept (special tokens $\cup$ every training-set token $\cup$ the 60,000 most frequent tokens of the tokenizer's unigram model); other token ids map to \texttt{[UNK]} through a fixed lookup table (int32, 0.5 MB, not a parameter).
 
